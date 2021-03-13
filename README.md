@@ -1,5 +1,5 @@
 # PrioriTree: Setting up BEAST Discrete-Biogeographic Analyses with Visualized Priors and Assessing Their Impact
-An interactive tool to help researchers set up `BEAST` phylodynamic analyses to infer biogeographic history (focussed on prior specification and evaluation).
+An interactive tool (https://jsigao.shinyapps.io/prioritree/) to help researchers set up `BEAST` phylodynamic analyses to infer biogeographic history (focussed on prior specification and evaluation).
 
 ## Manual
 A manual of `PrioriTree` can be found at https://bookdown.org/jsigao/PrioriTree_manual/.
