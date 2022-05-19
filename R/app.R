@@ -3854,7 +3854,7 @@ run_app <- function() {
         
         for (j in 1:nrow(focalparamsummary_logfileset$file[[i]])) {
           
-          progress$inc(1/lognum_all, detail = paste0("Processing estimate log file No.", j , " under prior model No.", i))
+          progress$inc(1 / lognum_all, detail = paste0("Processing estimate log file No.", j , " under prior model No.", i))
           
           col_names <- colnames(read.table(focalparamsummary_logfileset$file[[i]]$datapath[j], header = T, sep = "\t", nrows = 1, stringsAsFactors = F, check.names = F))
           

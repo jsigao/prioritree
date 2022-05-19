@@ -1,4 +1,15 @@
 
+#' Add together two numbers
+#' 
+#' @param states_dat a data-frame object containing at least two columns: one for the name of each tip (column name specified by \code{taxon_name}), 
+#' and the other for the trait state of each tip (column name specified by \code{discrete_trait_name})
+#' @param taxon_name name of the column containing tip names
+#' @param discrete_trait_name name of the column containing tip states
+#' @param date_name
+#' @param lheat
+#' @param under_prior
+#' @return xml code
+
 xml_discretetraitdata <- function(states_dat, taxon_name, discrete_trait_name, date_name = NULL, lheat = 1, under_prior = F) {
   
   states <- sort(as.vector(unique(states_dat[, discrete_trait_name])))
@@ -20,7 +31,7 @@ xml_discretetraitdata <- function(states_dat, taxon_name, discrete_trait_name, d
   }
   taxa <- paste0("\t<taxa id=\"taxa\">\n", taxa, "\t</taxa>\n\n")
   
-  # instert list of discrete trait
+  # insert list of discrete trait
   state_lines <- ""
   for (i in 1:states_num) {
     if (lheat == 1) {
