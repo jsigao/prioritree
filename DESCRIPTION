@@ -6,8 +6,8 @@ Authors@R: c(person("Jiansi", "Gao", email = "jsigao@ucdavis.edu", role = c("aut
     person("Bruce", "Rannala", email = "brannala@ucdavis.edu", role = "aut"),
     person("Brian", "Moore", email = "brianmoore@ucdavis.edu", role = "aut"))
 Maintainer: Jiansi Gao <jsigao@ucdavis.edu>
-Depends: R (>= 3.2.0), shiny
-Imports: shinyjs, rmutil, rmarkdown, DT, 
+Depends: R (>= 3.2.0)
+Imports: shiny, shinyjs, rmutil, rmarkdown, DT, 
     ape, phytools, phangorn, RColorBrewer, scales
 Title: An Interactive Tool for Specifying Priors in Biogeographic Phylodynamic Analyses and Assessing Their Impact
 Description: PrioriTree is motivated by properties of the discrete-biogeographic models implemented in BEAST and issues with the commonly used default priors in BEAST, identified by Gao et al. (2022).

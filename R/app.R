@@ -1,809 +1,803 @@
-
-options(warn = -1)
-options(shiny.maxRequestSize = 16384*1024^2)
-options(shiny.reactlog = T)
-
-prismDependencies <- tags$head(
-  tags$script(src = "prism.js"),
-  tags$link(rel = "stylesheet", type = "text/css", href = "prism-okaidia.css")
-)
-
-inputdefault_init <- list(model_symmetry = "symmetric", with_bssvs = T, empiricaltree_mh = "Metropolis-Hastings algorithm (recommended)",
-                          delta_prior = "Poisson", poisson_default = F, poisson_lambda = 0.693,
-                          mu_prior = "Hierarchical Exponential", alphaofgamma_mumean = 0.5,
-                          proposalweight_r = 10, proposalweight_delta = 30, proposalweight_pdeltaij = 5, proposalweight_rootfreq = 1,
-                          proposalweight_mu = 8, proposalweight_mumean = 4, proposalweight_tree = 30,
-                          mcmc_chainlength = 50000000, mcmc_samplingfreq = 10000, mcmc_numreplicates = 2)
+if (!requireNamespace("shiny", quietly = T)) {
+  stop("prioritree requires shiny to be installed.")
+}
 
 #' @import shiny
 #' @export
 run_app <- function() {
-  
+
   extdata_path <- system.file("extdata/", package = "prioritree")
   literature_bib_path <- paste0(extdata_path, "tool_input/literature.bib")
   file.copy(literature_bib_path, paste0(tempdir(), "/literature.bib"))
   
+  www_path <- system.file("www/", package = "prioritree")
+  shiny::addResourcePath("www", www_path)
+  prismDependencies <- shiny::tags$head(
+    shiny::tags$script(src = "www/prism.js"),
+    shiny::tags$link(rel = "stylesheet", type = "text/css", href = "www/prism-okaidia.css")
+  )
+  
   # Define UI for app
-  ui <- fluidPage(
+  ui <- shiny::fluidPage(
     
     shinyjs::useShinyjs(),
     shinyjs::inlineCSS(".divdisabled {pointer-events: none; opacity: 0.4;}"),
     shinyjs::inlineCSS(".disappeared {visibility:hidden;}"),
     prismDependencies,
-    tags$style(type = 'text/css', ".nav-tabs {font-size: 90%;}"),
-    tags$style(type = 'text/css', ".nav-pills {font-size: 85%;}"),
+    shiny::tags$style(type = 'text/css', ".nav-tabs {font-size: 90%;}"),
+    shiny::tags$style(type = 'text/css', ".nav-pills {font-size: 85%;}"),
     
-    tags$script(HTML("MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$']]}});"), type = "text/x-mathjax-config"),
+    shiny::tags$script(HTML("MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$']]}});"), type = "text/x-mathjax-config"),
     
-    navbarPage(title = "PrioriTree", id = "main_menu",
-               
-               tabPanel(title = "Analysis Setup", value = "analysis_setup",
-                        fluidRow(
-                          column(width = 4, style = "padding-left: 10px; padding-right: 10px;",
-                                 wellPanel(style = "background-color: #F2F3F4;",
-                                           
-                                           navlistPanel(id = "main_tabs", well = F, widths = c(4, 8), 
-                                                        
-                                                        # data input panel
-                                                        tabPanel(title = "Step 1: Import Data", value = "data_input",
+    shiny::navbarPage(title = "PrioriTree", id = "main_menu",
+                      
+                      shiny::tabPanel(title = "Analysis Setup", value = "analysis_setup",
+                                      shiny::fluidRow(
+                                        shiny::column(width = 4, style = "padding-left: 10px; padding-right: 10px;",
+                                                      shiny::wellPanel(style = "background-color: #F2F3F4;",
+                                                                       
+                                                                       shiny::navlistPanel(id = "main_tabs", well = F, widths = c(4, 8), 
+                                                                                           
+                                                                                           # data input panel
+                                                                                           shiny::tabPanel(title = "Step 1: Import Data", value = "data_input",
+                                                                                                           
+                                                                                                           shiny::tabsetPanel(type = "tabs", id = "datainput_tabs",
+                                                                                                                              # upload the discrete-trait data
+                                                                                                                              shiny::tabPanel(title = "Discrete-Geography File", value = "trait",
+                                                                                                                                              shiny::h6(""),
+                                                                                                                                              shiny::checkboxInput(inputId = "geography_file_defaultupload", label = "Load example discrete-geography file", value = F),
+                                                                                                                                              
+                                                                                                                                              shiny::div(id = "geography_file_div",
+                                                                                                                                                         shiny::fileInput(inputId = "geography_file", label = "Choose discrete-geography file", 
+                                                                                                                                                                          multiple = F, accept = c("text/csv", "text/comma-separated-values,text/plain", ".csv", ".txt"))
+                                                                                                                                              ),
+                                                                                                                                              
+                                                                                                                                              shiny::div(id = "geographyfile_attributes",
+                                                                                                                                                         shiny::checkboxInput(inputId = "geographyfile_header", label = "File header", value = T),
+                                                                                                                                                         shiny::selectInput(inputId = "taxoncolumn_name", label = "Taxon column name", choices = "", selectize = F),
+                                                                                                                                                         shiny::selectInput(inputId = "traitcolumn_name", label = "Discrete-geography column name", choices = "", selectize = F)
+                                                                                                                                              )
+                                                                                                                              ),
+                                                                                                                              
+                                                                                                                              # upload either a posterior distribution of trees or a single (MCC) tree
+                                                                                                                              shiny::tabPanel(title = "Tree(s) File", value = "tree",
+                                                                                                                                              shiny::h6(""),
+                                                                                                                                              shiny::checkboxInput(inputId = "tree_file_defaultupload", label = "Load example tree(s) file", value = F),
+                                                                                                                                              
+                                                                                                                                              shiny::div(id = "tree_num_defaultupload_div",
+                                                                                                                                                         shiny::radioButtons(inputId = "tree_num_defaultupload", label = "Type of example tree to load", 
+                                                                                                                                                                             choices = c("distribution (multiple)", "single"), inline = T),
+                                                                                                                                              ),
+                                                                                                                                              
+                                                                                                                                              shiny::div(id = "tree_file_div",
+                                                                                                                                                         shiny::fileInput("tree_file", "Choose tree(s) file", multiple = F, accept = c(".tree", ".trees", ".tre"))
+                                                                                                                                              )
+                                                                                                                              )
+                                                                                                                              
+                                                                                                           )
+                                                                                           ),
+                                                                                           
+                                                                                           # model specification panel
+                                                                                           shiny::tabPanel(title = "Step 2: Specify Model", value = "model_specification",
+                                                                                                           
+                                                                                                           shiny::tabsetPanel(type = "tabs", 
+                                                                                                                              shiny::tabPanel(title = "Geographic Model",
+                                                                                                                                              shiny::h6(""),
+                                                                                                                                              shiny::radioButtons(inputId = "model_symmetry", label = "Rate-Matrix Symmetry", choices = c("symmetric", "asymmetric"), 
+                                                                                                                                                                  selected = .pkg_env$inputdefault_init$model_symmetry, inline = T),
+                                                                                                                                              
+                                                                                                                                              shiny::h3(""),
+                                                                                                                                              shiny::checkboxInput(inputId = "with_bssvs", label = "Infer dispersal routes using BSSVS", value = .pkg_env$inputdefault_init$with_bssvs)),
+                                                                                                                              shiny::tabPanel(title = "Tree Model",
+                                                                                                                                              shiny::h6(""),
+                                                                                                                                              shiny::uiOutput("treemodel_ui")
+                                                                                                                              )
+                                                                                                           ),
+                                                                                                           
+                                                                                                           shiny::h4(""),
+                                                                                                           shiny::actionButton(inputId = "enablestep3_button", label = "Proceed to next step")
+                                                                                           ),
+                                                                                           
+                                                                                           # analysis configuration panel
+                                                                                           shiny::tabPanel(title = "Step 3: Configure Analysis (Basic)", value = "analysis_configBasic",
+                                                                                                           
+                                                                                                           shiny::tabsetPanel(type = "tabs", id = "analysisconfigBasic_tabs",
+                                                                                                                              
+                                                                                                                              shiny::tabPanel(title = "MCMC Sampling", value = "mcmcsampling",
+                                                                                                                                              shiny::h6(""),
+                                                                                                                                              shiny::numericInput(inputId = "mcmc_chainlength", label = "MCMC chain length", 
+                                                                                                                                                                  value = .pkg_env$inputdefault_init$mcmc_chainlength, min = 1),
+                                                                                                                                              
+                                                                                                                                              shiny::h5(""),
+                                                                                                                                              shiny::numericInput(inputId = "mcmc_samplingfreq", label = "Sampling frequency of the MCMC chain", 
+                                                                                                                                                                  value = .pkg_env$inputdefault_init$mcmc_samplingfreq, min = 1),
+                                                                                                                                              
+                                                                                                                                              shiny::h4(""),
+                                                                                                                                              shiny::numericInput(inputId = "mcmc_numreplicates", label = "Number of analysis replicates", 
+                                                                                                                                                                  value = .pkg_env$inputdefault_init$mcmc_numreplicates, min = 1)
+                                                                                                                              ),
+                                                                                                                              
+                                                                                                                              shiny::tabPanel(title = "Proposal Weights", value = "proposalweights",
+                                                                                                                                              shiny::h6(""),
+                                                                                                                                              shiny::uiOutput("proposalweight_ui")
+                                                                                                                              )
+                                                                                                           ),
+                                                                                                           
+                                                                                                           shiny::h4(""),
+                                                                                                           shiny::actionButton(inputId = "enablestep4_button", label = "Proceed to next step")
+                                                                                           ),
+                                                                                           
+                                                                                           shiny::tabPanel(title = "Step 4: Configure Analysis (Advanced)", value = "analysis_configAdvanced",
+                                                                                                           
+                                                                                                           shiny::tabsetPanel(type = "tabs", id = "analysisconfigAdvanced_tabs",
+                                                                                                                              
+                                                                                                                              shiny::tabPanel(title = "Summary Statistics",
+                                                                                                                                              shiny::h6(""),
+                                                                                                                                              shiny::selectInput(inputId = "do_stochasticmapping", label = "Estimate number of dispersal events using",
+                                                                                                                                                                 choices = c(Choose = '', "Fast stochastic mapping (incomplete history, simulation-free)", 
+                                                                                                                                                                             "Stochastic mapping (complete history, simulation-based)"), 
+                                                                                                                                                                 selected = "", multiple = F, selectize = F),
+                                                                                                                                              shiny::div(id = "markovjumps_totalpairwise", style = "margin-left:15px",
+                                                                                                                                                         shiny::checkboxInput(inputId = "markovjumps_total", label = "overall number of dispersal events", value = T),
+                                                                                                                                                         shiny::checkboxInput(inputId = "markovjumps_pairwise", label = "number of dispersal events between each pair of areas", value = T)
+                                                                                                                                              )
+                                                                                                                              ),
+                                                                                                                              shiny::tabPanel(title = "Model Exploration",
+                                                                                                                                              shiny::h6(""),
+                                                                                                                                              shiny::selectInput(inputId = "further_analysis", label = "Setting up further analysis for model exploration", 
+                                                                                                                                                                 choices = c(Choose = '', "Marginal likehood estimation", "Under prior", "Data cloning"), 
+                                                                                                                                                                 multiple = F, selectize = F),
+                                                                                                                                              shiny::uiOutput("furtheranalysis_ui")
+                                                                                                                              )
+                                                                                                           ),
+                                                                                                           
+                                                                                                           shiny::h4(""),
+                                                                                                           shiny::actionButton(inputId = "enablestep5_button", label = "Proceed to next step")
+                                                                                           ),
+                                                                                           
+                                                                                           shiny::tabPanel(title = "Step 5: Download BEAST XML and Methods Template", value = "src_export",
+                                                                                                           
+                                                                                                           shiny::tabsetPanel(type = "tabs", id = "download_tabs",
+                                                                                                                              
+                                                                                                                              shiny::tabPanel(title = "BEAST XML", style = "font-size:90%;",
+                                                                                                                                              
+                                                                                                                                              shiny::h6(''),
+                                                                                                                                              shiny::textInput(inputId = "xml_name", label = "Name of the XML file (without .xml as it will be appended automatically)", value = "geo"),
+                                                                                                                                              shiny::actionButton(inputId = "downloadxml_fake", label = "Download", icon = shiny::icon("download")),
+                                                                                                                                              shiny::downloadButton(outputId = "downloadxml_real", label = "Download")
+                                                                                                                              ),
+                                                                                                                              
+                                                                                                                              shiny::tabPanel(title = "Methods Template", style = "font-size:90%;",
+                                                                                                                                              
+                                                                                                                                              shiny::h6(''),
+                                                                                                                                              shiny::radioButtons("downloadmethods_format", label = "Format of the Methods template file", choices = c("Word", "LaTex", "PDF", "HTML", "Markdown"), selected = "Word", inline = T),
+                                                                                                                                              shiny::textInput(inputId = "methods_name", label = "Name of the Methods template file (without filename extension, e.g., '.doc', as it will be appended automatically)", value = "methods"),
+                                                                                                                                              shiny::actionButton(inputId = "downloadmethods_fake", label = "Download", icon = shiny::icon("download")),
+                                                                                                                                              shiny::downloadButton(outputId = "downloadmethods_real", label = "Download"))
+                                                                                                           )
+                                                                                           )
+                                                                                           
+                                                                       )
+                                                      )
+                                                      
+                                        ),
+                                        
+                                        shiny::column(width = 8, offset = 0, style = "padding: 0px 15px 0px 15px; margin: 0%;",
+                                                      
+                                                      shiny::fluidRow(id = "analysis_specification_prior", style = "padding: 2px; margin: 0%;",
+                                                                      
+                                                                      shiny::HTML('<div id = "prior_specification_panel" class="panel-heading" style = "background: none; border: 0;"><h4 class="panel-title"><a data-toggle="collapse" href="#prior_specification"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span>Prior Specification</a></h4></div>'),
+                                                                      shiny::div(id = 'prior_specification', class = "panel-collapse collapse", 
+                                                                                 shiny::column(width = 3, offset = 0, style = "padding: 7px 10px 0px 10px; margin: 0px 5px 0px 0px; background-color: #D6EAF8;",
+                                                                                               shiny::tabsetPanel(type = "tabs", id = "prior_tabs",
+                                                                                                                  
+                                                                                                                  shiny::tabPanel(title = shiny::HTML("Number of Dispersal Routes, &Delta;"), value = "delta",
+                                                                                                                                  shiny::h6(""),
+                                                                                                                                  
+                                                                                                                                  shiny::selectInput(inputId = "delta_prior", label = shiny::HTML("Prior on &Delta;"), 
+                                                                                                                                                     choices = c("Poisson", "Beta-Binomial", "Uniform"),
+                                                                                                                                                     multiple = F, selectize = T),
+                                                                                                                                  shiny::uiOutput("deltaprior_ui")),
+                                                                                                                  shiny::tabPanel(title = shiny::HTML("Average Dispersal Rate, &mu;"), value = "mu", 
+                                                                                                                                  shiny::h6(""),
+                                                                                                                                  
+                                                                                                                                  shiny::selectInput(inputId = "mu_prior", label = shiny::HTML("Prior on &mu;"), 
+                                                                                                                                                     choices = c("Hierarchical Exponential", "CTMC rate-ref (BEAST default)", "Empirical-Informed Exponential"),
+                                                                                                                                                     multiple = F, selectize = T),
+                                                                                                                                  shiny::uiOutput("muprior_ui"),
+                                                                                                                                  shiny::checkboxInput(inputId = "parsimonyscore_alltree", label = "Recompute parsimony score using all trees (to make the app more efficient, the default value is computed using the first two trees)", value = F)
+                                                                                                                  )
+                                                                                                                  
+                                                                                               )
+                                                                                 ),
+                                                                                 
+                                                                                 shiny::column(width = 4, offset = 0, style = "padding: 7px 10px 0px 10px; margin: 0px 12px 0px 5px; background-color: #F4F6F6;",
+                                                                                               shiny::tabsetPanel(type = "tabs", id = "priornote_tabs",
+                                                                                                                  
+                                                                                                                  shiny::tabPanel(title = "Brief Description", value = "text",
+                                                                                                                                  shiny::h6(''),
+                                                                                                                                  shiny::uiOutput(outputId = "priordescription_ui")
+                                                                                                                  ),
+                                                                                                                  
+                                                                                                                  shiny::tabPanel(title = "Math Notation", value = "math",
+                                                                                                                                  shiny::h6(''),
+                                                                                                                                  shiny::uiOutput(outputId = "priornotation_ui")
+                                                                                                                  )                                                               
+                                                                                               )
+                                                                                 ),
+                                                                                 
+                                                                                 shiny::column(width = 4, offset = 0, style = "padding: 0.2px; margin: 0%; background-color: #ffffff;",
+                                                                                               shiny::uiOutput(outputId = "priorplot_ui")
+                                                                                 )
+                                                                      )
+                                                                      
+                                                      ),
+                                                      
+                                                      shiny::div(id = "methods_template_div",
+                                                                 shiny::h3(""),
                                                                  
-                                                                 tabsetPanel(type = "tabs", id = "datainput_tabs",
-                                                                             # upload the discrete-trait data
-                                                                             tabPanel(title = "Discrete-Geography File", value = "trait",
-                                                                                      h6(""),
-                                                                                      checkboxInput(inputId = "geography_file_defaultupload", label = "Load example discrete-geography file", value = F),
-                                                                                      
-                                                                                      div(id = "geography_file_div",
-                                                                                          fileInput(inputId = "geography_file", label = "Choose discrete-geography file", 
-                                                                                                    multiple = F, accept = c("text/csv", "text/comma-separated-values,text/plain", ".csv", ".txt"))
-                                                                                      ),
-                                                                                      
-                                                                                      div(id = "geographyfile_attributes",
-                                                                                          checkboxInput(inputId = "geographyfile_header", label = "File header", value = T),
-                                                                                          selectInput(inputId = "taxoncolumn_name", label = "Taxon column name", choices = "", selectize = F),
-                                                                                          selectInput(inputId = "traitcolumn_name", label = "Discrete-geography column name", choices = "", selectize = F)
-                                                                                      )
-                                                                             ),
-                                                                             
-                                                                             # upload either a posterior distribution of trees or a single (MCC) tree
-                                                                             tabPanel(title = "Tree(s) File", value = "tree",
-                                                                                      h6(""),
-                                                                                      checkboxInput(inputId = "tree_file_defaultupload", label = "Load example tree(s) file", value = F),
-                                                                                      
-                                                                                      div(id = "tree_num_defaultupload_div",
-                                                                                          radioButtons(inputId = "tree_num_defaultupload", label = "Type of example tree to load", 
-                                                                                                       choices = c("distribution (multiple)", "single"), inline = T),
-                                                                                      ),
-                                                                                      
-                                                                                      div(id = "tree_file_div",
-                                                                                          fileInput("tree_file", "Choose tree(s) file", multiple = F, accept = c(".tree", ".trees", ".tre"))
-                                                                                      )
-                                                                             )
-                                                                             
+                                                                 shiny::HTML('<div id = "methods_template_panel" class = "panel-heading"><h4 class="panel-title"><a data-toggle="collapse" href="#methods_template"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span>Methods Template Viewer</a></h4></div>'),
+                                                                 shiny::div(id = 'methods_template', class = "panel-collapse collapse",
+                                                                            shiny::tabsetPanel(type = "tabs", id = "methods_tabs",
+                                                                                               
+                                                                                               shiny::tabPanel(title = "Data", value = "data",
+                                                                                                               shiny::h6(""),
+                                                                                                               shiny::fluidRow(style = "height:200px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;",
+                                                                                                                               shiny::uiOutput("methods_data")
+                                                                                                               )
+                                                                                               ),
+                                                                                               
+                                                                                               shiny::tabPanel(title = "Model", value = "model",
+                                                                                                               shiny::h6(""),
+                                                                                                               shiny::fluidRow(style = "height:200px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;",
+                                                                                                                               shiny::uiOutput("methods_model")
+                                                                                                               )
+                                                                                               ),
+                                                                                               
+                                                                                               shiny::tabPanel(title = "Bayesian Inference (Prior)", value = "prior",
+                                                                                                               shiny::h6(""),
+                                                                                                               shiny::fluidRow(style = "height:200px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;",
+                                                                                                                               shiny::uiOutput("methods_prior")
+                                                                                                               )
+                                                                                               ),
+                                                                                               
+                                                                                               shiny::tabPanel(title = "Analysis", value = "analysis",
+                                                                                                               shiny::h6(""),
+                                                                                                               shiny::fluidRow(style = "height:200px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;",
+                                                                                                                               shiny::uiOutput("methods_analysis")
+                                                                                                               )
+                                                                                               ),
+                                                                                               
+                                                                                               shiny::tabPanel(title = "Full", value = "full",
+                                                                                                               shiny::h6(""),
+                                                                                                               shiny::fluidRow(style = "height:200px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;",
+                                                                                                                               shiny::uiOutput("methods_full")
+                                                                                                               )
+                                                                                               )
+                                                                            )
+                                                                            
                                                                  )
-                                                        ),
-                                                        
-                                                        # model specification panel
-                                                        tabPanel(title = "Step 2: Specify Model", value = "model_specification",
+                                                      ),
+                                                      
+                                                      shiny::div(id = "xml_viewer_div",
+                                                                 shiny::h3(""),
                                                                  
-                                                                 tabsetPanel(type = "tabs", 
-                                                                             tabPanel(title = "Geographic Model",
-                                                                                      h6(""),
-                                                                                      radioButtons(inputId = "model_symmetry", label = "Rate-Matrix Symmetry", choices = c("symmetric", "asymmetric"), 
-                                                                                                   selected = inputdefault_init$model_symmetry, inline = T),
-                                                                                      
-                                                                                      h3(""),
-                                                                                      checkboxInput(inputId = "with_bssvs", label = "Infer dispersal routes using BSSVS", value = inputdefault_init$with_bssvs)),
-                                                                             tabPanel(title = "Tree Model",
-                                                                                      h6(""),
-                                                                                      uiOutput("treemodel_ui")
-                                                                             )
-                                                                 ),
-                                                                 
-                                                                 h4(""),
-                                                                 actionButton(inputId = "enablestep3_button", label = "Proceed to next step")
-                                                        ),
-                                                        
-                                                        # analysis configuration panel
-                                                        tabPanel(title = "Step 3: Configure Analysis (Basic)", value = "analysis_configBasic",
-                                                                 
-                                                                 tabsetPanel(type = "tabs", id = "analysisconfigBasic_tabs",
-                                                                             
-                                                                             tabPanel(title = "MCMC Sampling", value = "mcmcsampling",
-                                                                                      h6(""),
-                                                                                      numericInput(inputId = "mcmc_chainlength", label = "MCMC chain length", 
-                                                                                                   value = inputdefault_init$mcmc_chainlength, min = 1),
-                                                                                      
-                                                                                      h5(""),
-                                                                                      numericInput(inputId = "mcmc_samplingfreq", label = "Sampling frequency of the MCMC chain", 
-                                                                                                   value = inputdefault_init$mcmc_samplingfreq, min = 1),
-                                                                                      
-                                                                                      h4(""),
-                                                                                      numericInput(inputId = "mcmc_numreplicates", label = "Number of analysis replicates", 
-                                                                                                   value = inputdefault_init$mcmc_numreplicates, min = 1)
-                                                                             ),
-                                                                             
-                                                                             tabPanel(title = "Proposal Weights", value = "proposalweights",
-                                                                                      h6(""),
-                                                                                      uiOutput("proposalweight_ui")
-                                                                             )
-                                                                 ),
-                                                                 
-                                                                 h4(""),
-                                                                 actionButton(inputId = "enablestep4_button", label = "Proceed to next step")
-                                                        ),
-                                                        
-                                                        tabPanel(title = "Step 4: Configure Analysis (Advanced)", value = "analysis_configAdvanced",
-                                                                 
-                                                                 tabsetPanel(type = "tabs", id = "analysisconfigAdvanced_tabs",
-                                                                             
-                                                                             tabPanel(title = "Summary Statistics",
-                                                                                      h6(""),
-                                                                                      selectInput(inputId = "do_stochasticmapping", label = "Estimate number of dispersal events using",
-                                                                                                  choices = c(Choose = '', "Fast stochastic mapping (incomplete history, simulation-free)", 
-                                                                                                              "Stochastic mapping (complete history, simulation-based)"), 
-                                                                                                  selected = "", multiple = F, selectize = F),
-                                                                                      div(id = "markovjumps_totalpairwise", style = "margin-left:15px",
-                                                                                          checkboxInput(inputId = "markovjumps_total", label = "overall number of dispersal events", value = T),
-                                                                                          checkboxInput(inputId = "markovjumps_pairwise", label = "number of dispersal events between each pair of areas", value = T)
-                                                                                      )
-                                                                             ),
-                                                                             tabPanel(title = "Model Exploration",
-                                                                                      h6(""),
-                                                                                      selectInput(inputId = "further_analysis", label = "Setting up further analysis for model exploration", 
-                                                                                                  choices = c(Choose = '', "Marginal likehood estimation", "Under prior", "Data cloning"), 
-                                                                                                  multiple = F, selectize = F),
-                                                                                      uiOutput("furtheranalysis_ui")
-                                                                             )
-                                                                 ),
-                                                                 
-                                                                 h4(""),
-                                                                 actionButton(inputId = "enablestep5_button", label = "Proceed to next step")
-                                                        ),
-                                                        
-                                                        tabPanel(title = "Step 5: Download BEAST XML and Methods Template", value = "src_export",
-                                                                 
-                                                                 tabsetPanel(type = "tabs", id = "download_tabs",
-                                                                             
-                                                                             tabPanel(title = "BEAST XML", style = "font-size:90%;",
-                                                                                      
-                                                                                      h6(''),
-                                                                                      textInput(inputId = "xml_name", label = "Name of the XML file (without .xml as it will be appended automatically)", value = "geo"),
-                                                                                      actionButton(inputId = "downloadxml_fake", label = "Download", icon = icon("download")),
-                                                                                      downloadButton(outputId = "downloadxml_real", label = "Download")
-                                                                             ),
-                                                                             
-                                                                             tabPanel(title = "Methods Template", style = "font-size:90%;",
-                                                                                      
-                                                                                      h6(''),
-                                                                                      radioButtons("downloadmethods_format", label = "Format of the Methods template file", choices = c("Word", "LaTex", "PDF", "HTML", "Markdown"), selected = "Word", inline = T),
-                                                                                      textInput(inputId = "methods_name", label = "Name of the Methods template file (without filename extension, e.g., '.doc', as it will be appended automatically)", value = "methods"),
-                                                                                      actionButton(inputId = "downloadmethods_fake", label = "Download", icon = icon("download")),
-                                                                                      downloadButton(outputId = "downloadmethods_real", label = "Download"))
+                                                                 shiny::HTML('<div id = "xml_viewer_panel" class = "panel-heading"><h4 class="panel-title"><a data-toggle="collapse" href="#xml_viewer"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span>BEAST XML Viewer</a></h4></div>'),
+                                                                 shiny::div(id = 'xml_viewer', class = "panel-collapse collapse",
+                                                                            
+                                                                            shiny::tabsetPanel(type = "tabs", id = "xmlviewer_tabs",
+                                                                                               
+                                                                                               shiny::tabPanel(title = "Data", value = "xmldata",
+                                                                                                               shiny::h6(""),
+                                                                                                               shiny::fluidRow(style = "height: 200px; overflow: auto;",
+                                                                                                                               shiny::uiOutput("beastxml_data")
+                                                                                                               )
+                                                                                               ),
+                                                                                               
+                                                                                               shiny::tabPanel(title = "Model and Prior", value = "xmlmodelprior",
+                                                                                                               shiny::h6(""),
+                                                                                                               shiny::fluidRow(style = "height: 200px; overflow: auto;",
+                                                                                                                               shiny::uiOutput("beastxml_modelprior")
+                                                                                                               )
+                                                                                               ),
+                                                                                               
+                                                                                               shiny::tabPanel(title = "MCMC Sampling", value = "xmlmcmc",
+                                                                                                               shiny::h6(""),
+                                                                                                               shiny::fluidRow(style = "height: 200px; overflow: auto;",
+                                                                                                                               shiny::uiOutput("beastxml_mcmc")
+                                                                                                               )
+                                                                                               ),
+                                                                                               
+                                                                                               shiny::tabPanel(title = "Proposal", value = "xmlproposal",
+                                                                                                               shiny::h6(""),
+                                                                                                               shiny::fluidRow(style = "height: 200px; overflow: auto;",
+                                                                                                                               shiny::uiOutput("beastxml_proposal")
+                                                                                                               )
+                                                                                               ),
+                                                                                               
+                                                                                               shiny::tabPanel(title = "Phylogenetic Likelihood and Stochastic Mapping", value = "xmlphyloctmc",
+                                                                                                               shiny::h6(""),
+                                                                                                               shiny::fluidRow(style = "height: 200px; overflow: auto;",
+                                                                                                                               shiny::uiOutput("beastxml_phyloctmc")
+                                                                                                               )
+                                                                                               ),
+                                                                                               
+                                                                                               shiny::tabPanel(title = "Marginal Likelihood Estimation", value = "xmlpowerposterior",
+                                                                                                               shiny::h6(""),
+                                                                                                               shiny::fluidRow(style = "height: 200px; overflow: auto;",
+                                                                                                                               shiny::uiOutput("beastxml_powerposterior")
+                                                                                                               )
+                                                                                               ),
+                                                                                               
+                                                                                               shiny::tabPanel(title = "Full", value = "xmlfull",
+                                                                                                               shiny::h6(""),
+                                                                                                               shiny::fluidRow(style = "height: 200px; overflow: auto;",
+                                                                                                                               shiny::uiOutput("beastxml_full")
+                                                                                                               )
+                                                                                               )
+                                                                            )
+                                                                            
                                                                  )
+                                                      )
+                                        )
+                                      )
+                      ),
+                      
+                      shiny::navbarMenu(title = "Model-Exploration Post-Processing", menuName = "post_processing",
+                                        
+                                        shiny::tabPanel(title = "Data Cloning", value = "focalparam_summary",
+                                                        shiny::fluidRow(
+                                                          shiny::column(width = 4, style = "padding-left: 10px; padding-right: 10px; overflow-y:auto; max-height: 800px;",
+                                                                        
+                                                                        shiny::wellPanel(style = "background-color: #F2F3F4;",
+                                                                                         
+                                                                                         shiny::navlistPanel(id = "focalparamsummary_tabs", well = F, widths = c(4, 8), 
+                                                                                                             
+                                                                                                             shiny::tabPanel(title = "Step 1: Upload Log File(s)", value = "log_input",
+                                                                                                                             shiny::h6(""),
+                                                                                                                             
+                                                                                                                             shiny::checkboxInput(inputId = "focalparamsummary_logfile_defaultupload", label = "Load example log files", value = F),
+                                                                                                                             
+                                                                                                                             shiny::div(id = paste0("focalparamsummary_logfile_div", 1),
+                                                                                                                                        shiny::fileInput(inputId = paste0("focalparamsummary_logfile", 1), 
+                                                                                                                                                         label = paste0("Estimate log file(s) under prior No. ", 1), 
+                                                                                                                                                         multiple = T, accept = ".log")
+                                                                                                                             ),
+                                                                                                                             
+                                                                                                                             shiny::div(id = "focalparamsummary_loginput_addremove_div",
+                                                                                                                                        shiny::p("Add or remove prior model", align = "center", style = "font-size: 95%; font-weight: bold;"),
+                                                                                                                                        shiny::actionButton(inputId = "focalparamsummary_loginput_add", label = "", icon = shiny::icon("plus", lib = "glyphicon")),
+                                                                                                                                        shiny::actionButton(inputId = "focalparamsummary_loginput_remove", label = "", icon = shiny::icon("minus", lib = "glyphicon"))
+                                                                                                                             ),
+                                                                                                                             
+                                                                                                                             shiny::uiOutput(outputId = "focalparamsummary_paramname_ui"),
+                                                                                                                             shiny::actionButton(inputId = "focalparamsummary_startprocessing", label = "Read in the log files and start initial processing")
+                                                                                                             ),
+                                                                                                             
+                                                                                                             shiny::tabPanel(title = "Step 2: Configure Post-Processing Settings", value = "processing_settings",
+                                                                                                                             
+                                                                                                                             shiny::tabsetPanel(type = "tabs", id = "focalparamsummary_processingsettings_tabs",
+                                                                                                                                                
+                                                                                                                                                shiny::tabPanel(title = "Post-processing settings", value = "log_processing",
+                                                                                                                                                                shiny::h6(""),
+                                                                                                                                                                
+                                                                                                                                                                shiny::checkboxInput(inputId = "focalparamsummary_logcombinereplicates", label = "Combine replicates for all log files", value = F),
+                                                                                                                                                                
+                                                                                                                                                                shiny::uiOutput(outputId = "focalparamsummary_logprocessing_ui")
+                                                                                                                                                ),
+                                                                                                                                                
+                                                                                                                                                shiny::tabPanel(title = "Edit figure or table", value = "figuresettings_specific",
+                                                                                                                                                                
+                                                                                                                                                                shiny::h6(''),
+                                                                                                                                                                shiny::uiOutput(outputId = "focalparamsummary_priormodelname_ui"),
+                                                                                                                                                                
+                                                                                                                                                                shiny::HTML('<div id = "focalparamsummary_par_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#focalparamsummary_par_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>Margin edits</a></p></div>'),
+                                                                                                                                                                shiny::div(id = 'focalparamsummary_par_edits', class = "panel-collapse collapse in",
+                                                                                                                                                                           
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparamsummary_plot_margin_bottom", label = "Bottom margin (in inches) of the plot", value = 0.4, min = 0),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparamsummary_plot_margin_left", label = "Left margin  (in inches) of the plot", value = 0.45, min = 0),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparamsummary_plot_margin_top", label = "Top margin (in inches) of the plot", value = 0.15, min = 0),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparamsummary_plot_margin_right", label = "Right margin (in inches) of the plot", value = 0, min = 0)
+                                                                                                                                                                ),
+                                                                                                                                                                
+                                                                                                                                                                shiny::HTML('<div id = "focalparamsummary_xaxis_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#focalparamsummary_xaxis_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>X-axis edits</a></p></div>'),
+                                                                                                                                                                shiny::div(id = 'focalparamsummary_xaxis_edits', class = "panel-collapse collapse in",
+                                                                                                                                                                           
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparamsummary_plot_xaxis_lab_cex", label = "Cex of prior model name label", value = 1.35, min = 0.1),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparamsummary_plot_xaxis_lab_line", label = "Line of prior model name label", value = -2),
+                                                                                                                                                                           
+                                                                                                                                                                           shiny::textInput(inputId = "focalparamsummary_plot_x_lab", label = "X-axis name", value = "number of data clones"),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparamsummary_plot_x_lab_cex", label = "Cex of X-axis name", value = 1.6, min = 0.1),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparamsummary_plot_x_lab_line", label = "Line of X-axis name", value = 0.75),
+                                                                                                                                                                           
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparamsummary_plot_xaxis_boxgroup_labcex", label = "Cex of clone number label", value = 1.1, min = 0.1),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparamsummary_plot_xaxis_boxgroup_labline", label = "Line of clone number label", value = -2)
+                                                                                                                                                                           
+                                                                                                                                                                ),
+                                                                                                                                                                
+                                                                                                                                                                shiny::HTML('<div id = "focalparamsummary_yaxis_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#focalparamsummary_yaxis_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>Y-axis edits</a></p></div>'),
+                                                                                                                                                                shiny::div(id = 'focalparamsummary_yaxis_edits', class = "panel-collapse collapse in",
+                                                                                                                                                                           
+                                                                                                                                                                           shiny::textInput(inputId = "focalparamsummary_plot_y_lab", label = "Y-axis name", value = ""),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparamsummary_plot_y_lab_cex", label = "Cex of Y-axis name", value = 1.6, min = 0.1),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparamsummary_plot_y_lab_line", label = "Line of Y-axis name", value = 0.9),
+                                                                                                                                                                           
+                                                                                                                                                                           shiny::checkboxInput(inputId = "focalparamsummary_plot_yaxis_log", label = "Y-axis on the log scale", value = F),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparamsummary_plot_yaxis_lab_cex", label = "Cex of Y-axis label", value = 0.75, min = 0.1),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparamsummary_plot_yaxis_lab_line", label = "Line of Y-axis label", value = -1.5)
+                                                                                                                                                                )
+                                                                                                                                                )
+                                                                                                                                                
+                                                                                                                             )
+                                                                                                                             
+                                                                                                             ),
+                                                                                                             
+                                                                                                             shiny::tabPanel(title = "Step 3: Download Output", value = "download_output",
+                                                                                                                             shiny::h6(''),
+                                                                                                                             shiny::p("Download figure", align = "center", style = "font-size: 95%; font-weight: bold;"),
+                                                                                                                             shiny::radioButtons("focalparamsummary_plot_downloadformat", label = "Format of the figure", choices = c("PDF", "EPS", "PNG", "JPEG", "TIFF"), selected = "PDF", inline = T),
+                                                                                                                             shiny::textInput(inputId = "focalparamsummary_plot_downloadname", label = "Name of the figure (without filename extension, e.g., '.pdf', as it will be appended automatically)", value = "figure"),
+                                                                                                                             shiny::downloadButton(outputId = "focalparamsummary_plot_download", label = "Download"),
+                                                                                                                             
+                                                                                                                             shiny::h4(''),
+                                                                                                                             shiny::p("Download table", align = "center", style = "font-size: 95%; font-weight: bold;"),
+                                                                                                                             shiny::radioButtons("focalparamsummary_table_downloadformat", label = "Format of the table", choices = c("TSV", "CSV"), selected = "TSV", inline = T),
+                                                                                                                             shiny::textInput(inputId = "focalparamsummary_table_downloadname", label = "Name of the table (without filename extension, e.g., '.tsv', as it will be appended automatically)", value = "table"),
+                                                                                                                             shiny::downloadButton(outputId = "focalparamsummary_table_download", label = "Download")
+                                                                                                             )
+                                                                                                             
+                                                                                         )
+                                                                        )
+                                                          ),
+                                                          
+                                                          shiny::column(id = "focalparamsummary_result_column", width = 8, offset = 0, 
+                                                                        style = "padding: 0px 15px 0px 15px; margin: 0%;", 
+                                                                        
+                                                                        shiny::fluidRow(id = "focalparamsummary_result_div",
+                                                                                        
+                                                                                        shiny::tabsetPanel(type = "tabs", id = "focalparamsummary_result_tabs",
+                                                                                                           
+                                                                                                           shiny::tabPanel(title = "Figure", value = "figure",
+                                                                                                                           plotOutput(outputId = "focalparamsummary_plot", height = "auto")
+                                                                                                           ),
+                                                                                                           
+                                                                                                           shiny::tabPanel(title = "Table", value = "table",
+                                                                                                                           shiny::h6(''),
+                                                                                                                           DT::dataTableOutput(outputId = "focalparamsummary_table")
+                                                                                                                           
+                                                                                                           )
+                                                                                                           
+                                                                                        )
+                                                                        )
+                                                          )
                                                         )
-                                                        
-                                           )
-                                 )
-                                 
-                          ),
-                          
-                          column(width = 8, offset = 0, style = "padding: 0px 15px 0px 15px; margin: 0%;",
-                                 
-                                 fluidRow(id = "analysis_specification_prior", style = "padding: 2px; margin: 0%;",
-                                          
-                                          HTML('<div id = "prior_specification_panel" class="panel-heading" style = "background: none; border: 0;"><h4 class="panel-title"><a data-toggle="collapse" href="#prior_specification"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span>Prior Specification</a></h4></div>'),
-                                          div(id = 'prior_specification', class = "panel-collapse collapse", 
-                                              column(width = 3, offset = 0, style = "padding: 7px 10px 0px 10px; margin: 0px 5px 0px 0px; background-color: #D6EAF8;",
-                                                     tabsetPanel(type = "tabs", id = "prior_tabs",
-                                                                 
-                                                                 tabPanel(title = HTML("Number of Dispersal Routes, &Delta;"), value = "delta",
-                                                                          h6(""),
-                                                                          
-                                                                          selectInput(inputId = "delta_prior", label = HTML("Prior on &Delta;"), 
-                                                                                      choices = c("Poisson", "Beta-Binomial", "Uniform"),
-                                                                                      multiple = F, selectize = T),
-                                                                          uiOutput("deltaprior_ui")),
-                                                                 tabPanel(title = HTML("Average Dispersal Rate, &mu;"), value = "mu", 
-                                                                          h6(""),
-                                                                          
-                                                                          selectInput(inputId = "mu_prior", label = HTML("Prior on &mu;"), 
-                                                                                      choices = c("Hierarchical Exponential", "CTMC rate-ref (BEAST default)", "Empirical-Informed Exponential"),
-                                                                                      multiple = F, selectize = T),
-                                                                          uiOutput("muprior_ui"),
-                                                                          checkboxInput(inputId = "parsimonyscore_alltree", label = "Recompute parsimony score using all trees (to make the app more efficient, the default value is computed using the first two trees)", value = F)
-                                                                 )
-                                                                 
-                                                     )
-                                              ),
-                                              
-                                              column(width = 4, offset = 0, style = "padding: 7px 10px 0px 10px; margin: 0px 12px 0px 5px; background-color: #F4F6F6;",
-                                                     tabsetPanel(type = "tabs", id = "priornote_tabs",
-                                                                 
-                                                                 tabPanel(title = "Brief Description", value = "text",
-                                                                          h6(''),
-                                                                          uiOutput(outputId = "priordescription_ui")
-                                                                 ),
-                                                                 
-                                                                 tabPanel(title = "Math Notation", value = "math",
-                                                                          h6(''),
-                                                                          uiOutput(outputId = "priornotation_ui")
-                                                                 )                                                               
-                                                     )
-                                              ),
-                                              
-                                              column(width = 4, offset = 0, style = "padding: 0.2px; margin: 0%; background-color: #ffffff;",
-                                                     uiOutput(outputId = "priorplot_ui")
-                                              )
-                                          )
-                                          
-                                 ),
-                                 
-                                 div(id = "methods_template_div",
-                                     h3(""),
-                                     
-                                     HTML('<div id = "methods_template_panel" class = "panel-heading"><h4 class="panel-title"><a data-toggle="collapse" href="#methods_template"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span>Methods Template Viewer</a></h4></div>'),
-                                     div(id = 'methods_template', class = "panel-collapse collapse",
-                                         tabsetPanel(type = "tabs", id = "methods_tabs",
-                                                     
-                                                     tabPanel(title = "Data", value = "data",
-                                                              h6(""),
-                                                              fluidRow(style = "height:200px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;",
-                                                                       uiOutput("methods_data")
-                                                              )
-                                                     ),
-                                                     
-                                                     tabPanel(title = "Model", value = "model",
-                                                              h6(""),
-                                                              fluidRow(style = "height:200px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;",
-                                                                       uiOutput("methods_model")
-                                                              )
-                                                     ),
-                                                     
-                                                     tabPanel(title = "Bayesian Inference (Prior)", value = "prior",
-                                                              h6(""),
-                                                              fluidRow(style = "height:200px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;",
-                                                                       uiOutput("methods_prior")
-                                                              )
-                                                     ),
-                                                     
-                                                     tabPanel(title = "Analysis", value = "analysis",
-                                                              h6(""),
-                                                              fluidRow(style = "height:200px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;",
-                                                                       uiOutput("methods_analysis")
-                                                              )
-                                                     ),
-                                                     
-                                                     tabPanel(title = "Full", value = "full",
-                                                              h6(""),
-                                                              fluidRow(style = "height:200px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;",
-                                                                       uiOutput("methods_full")
-                                                              )
-                                                     )
-                                         )
-                                         
-                                     )
-                                 ),
-                                 
-                                 div(id = "xml_viewer_div",
-                                     h3(""),
-                                     
-                                     HTML('<div id = "xml_viewer_panel" class = "panel-heading"><h4 class="panel-title"><a data-toggle="collapse" href="#xml_viewer"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span>BEAST XML Viewer</a></h4></div>'),
-                                     div(id = 'xml_viewer', class = "panel-collapse collapse",
-                                         
-                                         tabsetPanel(type = "tabs", id = "xmlviewer_tabs",
-                                                     
-                                                     tabPanel(title = "Data", value = "xmldata",
-                                                              h6(""),
-                                                              fluidRow(style = "height: 200px; overflow: auto;",
-                                                                       uiOutput("beastxml_data")
-                                                              )
-                                                     ),
-                                                     
-                                                     tabPanel(title = "Model and Prior", value = "xmlmodelprior",
-                                                              h6(""),
-                                                              fluidRow(style = "height: 200px; overflow: auto;",
-                                                                       uiOutput("beastxml_modelprior")
-                                                              )
-                                                     ),
-                                                     
-                                                     tabPanel(title = "MCMC Sampling", value = "xmlmcmc",
-                                                              h6(""),
-                                                              fluidRow(style = "height: 200px; overflow: auto;",
-                                                                       uiOutput("beastxml_mcmc")
-                                                              )
-                                                     ),
-                                                     
-                                                     tabPanel(title = "Proposal", value = "xmlproposal",
-                                                              h6(""),
-                                                              fluidRow(style = "height: 200px; overflow: auto;",
-                                                                       uiOutput("beastxml_proposal")
-                                                              )
-                                                     ),
-                                                     
-                                                     tabPanel(title = "Phylogenetic Likelihood and Stochastic Mapping", value = "xmlphyloctmc",
-                                                              h6(""),
-                                                              fluidRow(style = "height: 200px; overflow: auto;",
-                                                                       uiOutput("beastxml_phyloctmc")
-                                                              )
-                                                     ),
-                                                     
-                                                     tabPanel(title = "Marginal Likelihood Estimation", value = "xmlpowerposterior",
-                                                              h6(""),
-                                                              fluidRow(style = "height: 200px; overflow: auto;",
-                                                                       uiOutput("beastxml_powerposterior")
-                                                              )
-                                                     ),
-                                                     
-                                                     tabPanel(title = "Full", value = "xmlfull",
-                                                              h6(""),
-                                                              fluidRow(style = "height: 200px; overflow: auto;",
-                                                                       uiOutput("beastxml_full")
-                                                              )
-                                                     )
-                                         )
-                                         
-                                     )
-                                 )
-                          )
-                        )
-               ),
-               
-               navbarMenu(title = "Model-Exploration Post-Processing", menuName = "post_processing",
-                          
-                          tabPanel(title = "Data Cloning", value = "focalparam_summary",
-                                   fluidRow(
-                                     column(width = 4, style = "padding-left: 10px; padding-right: 10px; overflow-y:auto; max-height: 800px;",
-                                            
-                                            wellPanel(style = "background-color: #F2F3F4;",
-                                                      
-                                                      navlistPanel(id = "focalparamsummary_tabs", well = F, widths = c(4, 8), 
-                                                                   
-                                                                   tabPanel(title = "Step 1: Upload Log File(s)", value = "log_input",
-                                                                            h6(""),
-                                                                            
-                                                                            checkboxInput(inputId = "focalparamsummary_logfile_defaultupload", label = "Load example log files", value = F),
-                                                                            
-                                                                            div(id = paste0("focalparamsummary_logfile_div", 1),
-                                                                                fileInput(inputId = paste0("focalparamsummary_logfile", 1), 
-                                                                                          label = paste0("Estimate log file(s) under prior No. ", 1), 
-                                                                                          multiple = T, accept = ".log")
-                                                                            ),
-                                                                            
-                                                                            div(id = "focalparamsummary_loginput_addremove_div",
-                                                                                p("Add or remove prior model", align = "center", style = "font-size: 95%; font-weight: bold;"),
-                                                                                actionButton(inputId = "focalparamsummary_loginput_add", label = "", icon = icon("plus", lib = "glyphicon")),
-                                                                                actionButton(inputId = "focalparamsummary_loginput_remove", label = "", icon = icon("minus", lib = "glyphicon"))
-                                                                            ),
-                                                                            
-                                                                            uiOutput(outputId = "focalparamsummary_paramname_ui"),
-                                                                            actionButton(inputId = "focalparamsummary_startprocessing", label = "Read in the log files and start initial processing")
-                                                                   ),
-                                                                   
-                                                                   tabPanel(title = "Step 2: Configure Post-Processing Settings", value = "processing_settings",
-                                                                            
-                                                                            tabsetPanel(type = "tabs", id = "focalparamsummary_processingsettings_tabs",
+                                        ),
+                                        
+                                        
+                                        shiny::tabPanel(title = "Robust Bayesian", value = "focalparam2_summary",
+                                                        shiny::fluidRow(
+                                                          shiny::column(width = 4, style = "padding-left: 10px; padding-right: 10px; overflow-y:auto; max-height: 800px;",
+                                                                        
+                                                                        shiny::wellPanel(style = "background-color: #F2F3F4;",
+                                                                                         
+                                                                                         shiny::navlistPanel(id = "focalparam2summary_tabs", well = F, widths = c(4, 8), 
+                                                                                                             
+                                                                                                             shiny::tabPanel(title = "Step 1: Upload Log File(s)", value = "log_input",
+                                                                                                                             shiny::h6(""),
+                                                                                                                             
+                                                                                                                             shiny::checkboxInput(inputId = "focalparam2summary_logfile_defaultupload", label = "Load example log files", value = F),
+                                                                                                                             
+                                                                                                                             shiny::div(id = paste0("focalparam2summary_logfile_div", 1),
+                                                                                                                                        shiny::fileInput(inputId = paste0("focalparam2summary_logfile", 1), 
+                                                                                                                                                         label = paste0("Estimate log file(s) under prior No. ", 1), 
+                                                                                                                                                         multiple = T, accept = ".log")
+                                                                                                                             ),
+                                                                                                                             
+                                                                                                                             shiny::div(id = "focalparam2summary_loginput_addremove_div",
+                                                                                                                                        shiny::p("Add or remove prior model", align = "center", style = "font-size: 95%; font-weight: bold;"),
+                                                                                                                                        shiny::actionButton(inputId = "focalparam2summary_loginput_add", label = "", icon = shiny::icon("plus", lib = "glyphicon")),
+                                                                                                                                        shiny::actionButton(inputId = "focalparam2summary_loginput_remove", label = "", icon = shiny::icon("minus", lib = "glyphicon"))
+                                                                                                                             ),
+                                                                                                                             
+                                                                                                                             shiny::uiOutput(outputId = "focalparam2summary_paramname_ui"),
+                                                                                                                             shiny::actionButton(inputId = "focalparam2summary_startprocessing", label = "Read in the log files and start initial processing")
+                                                                                                             ),
+                                                                                                             
+                                                                                                             shiny::tabPanel(title = "Step 2: Configure Post-Processing Settings", value = "processing_settings",
+                                                                                                                             
+                                                                                                                             shiny::tabsetPanel(type = "tabs", id = "focalparam2summary_processingsettings_tabs",
+                                                                                                                                                
+                                                                                                                                                shiny::tabPanel(title = "Post-processing settings", value = "log_processing",
+                                                                                                                                                                shiny::h6(""),
+                                                                                                                                                                
+                                                                                                                                                                shiny::checkboxInput(inputId = "focalparam2summary_logcombinereplicates", label = "Combine replicates for all log files", value = F),
+                                                                                                                                                                
+                                                                                                                                                                shiny::uiOutput(outputId = "focalparam2summary_logprocessing_ui")
+                                                                                                                                                ),
+                                                                                                                                                
+                                                                                                                                                shiny::tabPanel(title = "Edit figure or table", value = "figuresettings_specific",
+                                                                                                                                                                
+                                                                                                                                                                shiny::h6(''),
+                                                                                                                                                                shiny::uiOutput(outputId = "focalparam2summary_priormodelname_ui"),
+                                                                                                                                                                
+                                                                                                                                                                shiny::HTML('<div id = "focalparam2summary_par_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#focalparam2summary_par_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>Margin edits</a></p></div>'),
+                                                                                                                                                                shiny::div(id = 'focalparam2summary_par_edits', class = "panel-collapse collapse in",
+                                                                                                                                                                           
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparam2summary_plot_margin_bottom", label = "Bottom margin (in inches) of the plot", value = 0.25, min = 0),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparam2summary_plot_margin_left", label = "Left margin  (in inches) of the plot", value = 0.45, min = 0),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparam2summary_plot_margin_top", label = "Top margin (in inches) of the plot", value = 0.15, min = 0),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparam2summary_plot_margin_right", label = "Right margin (in inches) of the plot", value = 0, min = 0)
+                                                                                                                                                                ),
+                                                                                                                                                                
+                                                                                                                                                                shiny::HTML('<div id = "focalparam2summary_xaxis_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#focalparam2summary_xaxis_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>X-axis edits</a></p></div>'),
+                                                                                                                                                                shiny::div(id = 'focalparam2summary_xaxis_edits', class = "panel-collapse collapse in",
+                                                                                                                                                                           
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparam2summary_plot_xaxis_lab_cex", label = "Cex of prior model name label", value = 1.35, min = 0.1),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparam2summary_plot_xaxis_lab_line", label = "Line of prior model name label", value = -2),
+                                                                                                                                                                           
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparam2summary_plot_xaxis_boxgroup_labcex", label = "Cex of prior or posterior label", value = 1.1, min = 0.1),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparam2summary_plot_xaxis_boxgroup_labline", label = "Line of prior or posterior label", value = -2)
+                                                                                                                                                                           
+                                                                                                                                                                ),
+                                                                                                                                                                
+                                                                                                                                                                shiny::HTML('<div id = "focalparam2summary_yaxis_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#focalparam2summary_yaxis_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>Y-axis edits</a></p></div>'),
+                                                                                                                                                                shiny::div(id = 'focalparam2summary_yaxis_edits', class = "panel-collapse collapse in",
+                                                                                                                                                                           
+                                                                                                                                                                           shiny::textInput(inputId = "focalparam2summary_plot_y_lab", label = "Y-axis name", value = ""),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparam2summary_plot_y_lab_cex", label = "Cex of Y-axis name", value = 1.6, min = 0.1),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparam2summary_plot_y_lab_line", label = "Line of Y-axis name", value = 0.9),
+                                                                                                                                                                           
+                                                                                                                                                                           shiny::checkboxInput(inputId = "focalparam2summary_plot_yaxis_log", label = "Y-axis on the log scale", value = F),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparam2summary_plot_yaxis_lab_cex", label = "Cex of Y-axis label", value = 0.75, min = 0.1),
+                                                                                                                                                                           shiny::numericInput(inputId = "focalparam2summary_plot_yaxis_lab_line", label = "Line of Y-axis label", value = -1.5)
+                                                                                                                                                                )
+                                                                                                                                                )
+                                                                                                                             )
+                                                                                                                             
+                                                                                                             ),
+                                                                                                             
+                                                                                                             shiny::tabPanel(title = "Step 3: Download Output", value = "download_output",
+                                                                                                                             shiny::h6(''),
+                                                                                                                             shiny::p("Download figure", align = "center", style = "font-size: 95%; font-weight: bold;"),
+                                                                                                                             shiny::radioButtons("focalparam2summary_plot_downloadformat", label = "Format of the figure", choices = c("PDF", "EPS", "PNG", "JPEG", "TIFF"), selected = "PDF", inline = T),
+                                                                                                                             shiny::textInput(inputId = "focalparam2summary_plot_downloadname", label = "Name of the figure (without filename extension, e.g., '.pdf', as it will be appended automatically)", value = "figure"),
+                                                                                                                             shiny::downloadButton(outputId = "focalparam2summary_plot_download", label = "Download"),
+                                                                                                                             
+                                                                                                                             shiny::h4(''),
+                                                                                                                             shiny::p("Download table", align = "center", style = "font-size: 95%; font-weight: bold;"),
+                                                                                                                             shiny::radioButtons("focalparam2summary_table_downloadformat", label = "Format of the table", choices = c("TSV", "CSV"), selected = "TSV", inline = T),
+                                                                                                                             shiny::textInput(inputId = "focalparam2summary_table_downloadname", label = "Name of the table (without filename extension, e.g., '.tsv', as it will be appended automatically)", value = "table"),
+                                                                                                                             shiny::downloadButton(outputId = "focalparam2summary_table_download", label = "Download")
+                                                                                                             )
+                                                                                                             
+                                                                                         )
+                                                                        )
+                                                          ),
+                                                          
+                                                          shiny::column(id = "focalparam2summary_result_column", width = 8, offset = 0, 
+                                                                        style = "padding: 0px 15px 0px 15px; margin: 0%;", 
+                                                                        
+                                                                        shiny::fluidRow(id = "focalparam2summary_result_div",
                                                                                         
-                                                                                        tabPanel(title = "Post-processing settings", value = "log_processing",
-                                                                                                 h6(""),
-                                                                                                 
-                                                                                                 checkboxInput(inputId = "focalparamsummary_logcombinereplicates", label = "Combine replicates for all log files", value = F),
-                                                                                                 
-                                                                                                 uiOutput(outputId = "focalparamsummary_logprocessing_ui")
-                                                                                        ),
-                                                                                        
-                                                                                        tabPanel(title = "Edit figure or table", value = "figuresettings_specific",
-                                                                                                 
-                                                                                                 h6(''),
-                                                                                                 uiOutput(outputId = "focalparamsummary_priormodelname_ui"),
-                                                                                                 
-                                                                                                 HTML('<div id = "focalparamsummary_par_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#focalparamsummary_par_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>Margin edits</a></p></div>'),
-                                                                                                 div(id = 'focalparamsummary_par_edits', class = "panel-collapse collapse in",
-                                                                                                     
-                                                                                                     numericInput(inputId = "focalparamsummary_plot_margin_bottom", label = "Bottom margin (in inches) of the plot", value = 0.4, min = 0),
-                                                                                                     numericInput(inputId = "focalparamsummary_plot_margin_left", label = "Left margin  (in inches) of the plot", value = 0.45, min = 0),
-                                                                                                     numericInput(inputId = "focalparamsummary_plot_margin_top", label = "Top margin (in inches) of the plot", value = 0.15, min = 0),
-                                                                                                     numericInput(inputId = "focalparamsummary_plot_margin_right", label = "Right margin (in inches) of the plot", value = 0, min = 0)
-                                                                                                 ),
-                                                                                                 
-                                                                                                 HTML('<div id = "focalparamsummary_xaxis_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#focalparamsummary_xaxis_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>X-axis edits</a></p></div>'),
-                                                                                                 div(id = 'focalparamsummary_xaxis_edits', class = "panel-collapse collapse in",
-                                                                                                     
-                                                                                                     numericInput(inputId = "focalparamsummary_plot_xaxis_lab_cex", label = "Cex of prior model name label", value = 1.35, min = 0.1),
-                                                                                                     numericInput(inputId = "focalparamsummary_plot_xaxis_lab_line", label = "Line of prior model name label", value = -2),
-                                                                                                     
-                                                                                                     textInput(inputId = "focalparamsummary_plot_x_lab", label = "X-axis name", value = "number of data clones"),
-                                                                                                     numericInput(inputId = "focalparamsummary_plot_x_lab_cex", label = "Cex of X-axis name", value = 1.6, min = 0.1),
-                                                                                                     numericInput(inputId = "focalparamsummary_plot_x_lab_line", label = "Line of X-axis name", value = 0.75),
-                                                                                                     
-                                                                                                     numericInput(inputId = "focalparamsummary_plot_xaxis_boxgroup_labcex", label = "Cex of clone number label", value = 1.1, min = 0.1),
-                                                                                                     numericInput(inputId = "focalparamsummary_plot_xaxis_boxgroup_labline", label = "Line of clone number label", value = -2)
-                                                                                                     
-                                                                                                 ),
-                                                                                                 
-                                                                                                 HTML('<div id = "focalparamsummary_yaxis_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#focalparamsummary_yaxis_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>Y-axis edits</a></p></div>'),
-                                                                                                 div(id = 'focalparamsummary_yaxis_edits', class = "panel-collapse collapse in",
-                                                                                                     
-                                                                                                     textInput(inputId = "focalparamsummary_plot_y_lab", label = "Y-axis name", value = ""),
-                                                                                                     numericInput(inputId = "focalparamsummary_plot_y_lab_cex", label = "Cex of Y-axis name", value = 1.6, min = 0.1),
-                                                                                                     numericInput(inputId = "focalparamsummary_plot_y_lab_line", label = "Line of Y-axis name", value = 0.9),
-                                                                                                     
-                                                                                                     checkboxInput(inputId = "focalparamsummary_plot_yaxis_log", label = "Y-axis on the log scale", value = F),
-                                                                                                     numericInput(inputId = "focalparamsummary_plot_yaxis_lab_cex", label = "Cex of Y-axis label", value = 0.75, min = 0.1),
-                                                                                                     numericInput(inputId = "focalparamsummary_plot_yaxis_lab_line", label = "Line of Y-axis label", value = -1.5)
-                                                                                                 )
+                                                                                        shiny::tabsetPanel(type = "tabs", id = "focalparam2summary_result_tabs",
+                                                                                                           
+                                                                                                           shiny::tabPanel(title = "Figure", value = "figure",
+                                                                                                                           plotOutput(outputId = "focalparam2summary_plot", height = "auto")
+                                                                                                           ),
+                                                                                                           
+                                                                                                           shiny::tabPanel(title = "Table", value = "table",
+                                                                                                                           shiny::h6(''),
+                                                                                                                           DT::dataTableOutput(outputId = "focalparam2summary_table")
+                                                                                                                           
+                                                                                                           )
+                                                                                                           
                                                                                         )
+                                                                        )
+                                                          )
+                                                        )
+                                        ),
+                                        
+                                        
+                                        shiny::tabPanel(title = "Posterior-Predictive Checking", value = "posterior_predictive",
+                                                        shiny::fluidRow(
+                                                          shiny::column(width = 4, style = "padding-left: 10px; padding-right: 10px; overflow-y:auto; max-height: 800px;",
+                                                                        
+                                                                        shiny::wellPanel(style = "background-color: #F2F3F4;",
+                                                                                         
+                                                                                         shiny::navlistPanel(id = "posteriorpredictive_tabs", well = F, widths = c(4, 8), 
+                                                                                                             
+                                                                                                             shiny::tabPanel(title = "Step 1: Upload Files and Setup Simulations", value = "log_input",
+                                                                                                                             
+                                                                                                                             shiny::tabsetPanel(type = "tabs", id = "posteriorpredictive_input_tabs",
+                                                                                                                                                
+                                                                                                                                                shiny::tabPanel(title = "Discrete-Geography File", value = "trait",
+                                                                                                                                                                shiny::h6(''),
+                                                                                                                                                                
+                                                                                                                                                                shiny::checkboxInput(inputId = "posteriorpredictive_geographyfile_defaultupload", label = "Load example discrete-geography file", value = F),
+                                                                                                                                                                
+                                                                                                                                                                shiny::div(id = "posteriorpredictive_geographyfile_div", 
+                                                                                                                                                                           shiny::fileInput("posteriorpredictive_geographyfile", "Choose discrete-geography file", multiple = F, 
+                                                                                                                                                                                            accept = c("text/csv","text/comma-separated-values,text/plain",".csv", ".txt"))
+                                                                                                                                                                ),
+                                                                                                                                                                shiny::div(id = "posteriorpredictive_geographyfile_attributes",
+                                                                                                                                                                           shiny::checkboxInput(inputId = "posteriorpredictive_geographyfile_header", label = "header", value = T),
+                                                                                                                                                                           shiny::selectInput(inputId = "posteriorpredictive_geographyfile_taxoncolumn_name", label = "Taxon column name", choices = "", selectize = F),
+                                                                                                                                                                           shiny::selectInput(inputId = "posteriorpredictive_geographyfile_traitcolumn_name", label = "Discrete-geography column name", choices = "", selectize = F)
+                                                                                                                                                                ),
+                                                                                                                                                ),
+                                                                                                                                                
+                                                                                                                                                shiny::tabPanel(title = "Log and Tree Files", value = "logtree",
+                                                                                                                                                                
+                                                                                                                                                                shiny::checkboxInput(inputId = "posteriorpredictive_logfile_defaultupload", label = "Load example log and tree files", value = F),
+                                                                                                                                                                
+                                                                                                                                                                shiny::div(id = paste0("posteriorpredictive_logfile_div", 1),
+                                                                                                                                                                           shiny::h6(''),
+                                                                                                                                                                           shiny::p(paste0("Upload estimate files under prior No. ", 1), align = "center", 
+                                                                                                                                                                                    style = "font-size: 95%; font-weight: bold;"),
+                                                                                                                                                                           shiny::fileInput(inputId = paste0("posteriorpredictive_logfile", 1), 
+                                                                                                                                                                                            label = "log file(s)", 
+                                                                                                                                                                                            multiple = T, accept = ".log"),
+                                                                                                                                                                           shiny::fileInput(inputId = paste0("posteriorpredictive_treefile", 1), 
+                                                                                                                                                                                            label = "tree file(s)",
+                                                                                                                                                                                            multiple = T, accept = c(".trees", ".tree", ".tre"))
+                                                                                                                                                                ),
+                                                                                                                                                                
+                                                                                                                                                                shiny::div(id = "posteriorpredictive_loginput_addremove_div",
+                                                                                                                                                                           shiny::p("Add or remove prior model", align = "center", style = "font-size: 95%; font-weight: bold;"),
+                                                                                                                                                                           shiny::actionButton(inputId = "posteriorpredictive_loginput_add", label = "", icon = shiny::icon("plus", lib = "glyphicon")),
+                                                                                                                                                                           shiny::actionButton(inputId = "posteriorpredictive_loginput_remove", label = "", icon = shiny::icon("minus", lib = "glyphicon"))
+                                                                                                                                                                )
+                                                                                                                                                ),
+                                                                                                                                                
+                                                                                                                                                shiny::tabPanel(title = "Perform Simulations", value = "startsimulations",
+                                                                                                                                                                shiny::checkboxInput(inputId = "posteriorpredictive_simulateall",
+                                                                                                                                                                                     label = "Perform one simulation for each sample", value = T),
+                                                                                                                                                                shiny::div(id = "posteriorpredictive_simulatenumber_div",
+                                                                                                                                                                           shiny::numericInput(inputId = "posteriorpredictive_simulatenumber",
+                                                                                                                                                                                               label = "Number of simulations",
+                                                                                                                                                                                               value = 100, min = 1, step = 1),
+                                                                                                                                                                           shiny::p("*sampling with replacement so this number can be greater than the number of samples", style = "font-size:90%; margin-top:-1em;")
+                                                                                                                                                                ),
+                                                                                                                                                                
+                                                                                                                                                                shiny::h5(''),
+                                                                                                                                                                shiny::actionButton(inputId = "posteriorpredictive_startprocessing", label = "Start posterior-predictive simulation")
+                                                                                                                                                )
+                                                                                                                             )
+                                                                                                             ),
+                                                                                                             
+                                                                                                             shiny::tabPanel(title = "Step 2: Summarize Posterior-Predictive Statistics", value = "processing_settings",
+                                                                                                                             
+                                                                                                                             shiny::tabsetPanel(type = "tabs", id = "posteriorpredictive_processingsettings_tabs",
+                                                                                                                                                
+                                                                                                                                                shiny::tabPanel(title = "Post-processing settings", value = "log_processing",
+                                                                                                                                                                shiny::h6(''),
+                                                                                                                                                                
+                                                                                                                                                                shiny::radioButtons(inputId = "posteriorpredictive_teststatistic", label = "Choose the summary statistic to plot", 
+                                                                                                                                                                                    choices = c("Parsimony", "Tip-wise multinomial"), selected = "Parsimony", inline = F),
+                                                                                                                                                                
+                                                                                                                                                                shiny::h6(''),
+                                                                                                                                                                shiny::checkboxInput(inputId = "posteriorpredictive_logcombinereplicates", label = "Combine replicates for all log files", value = F),
+                                                                                                                                                                
+                                                                                                                                                                shiny::uiOutput(outputId = "posteriorpredictive_logprocessing_ui")
+                                                                                                                                                ),
+                                                                                                                                                
+                                                                                                                                                shiny::tabPanel(title = "Edit figure or table", value = "figuresettings_specific",
+                                                                                                                                                                
+                                                                                                                                                                shiny::h6(''),
+                                                                                                                                                                shiny::uiOutput(outputId = "posteriorpredictive_priormodelname_ui"),
+                                                                                                                                                                
+                                                                                                                                                                shiny::HTML('<div id = "posteriorpredictive_par_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#posteriorpredictive_par_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>Margin edits</a></p></div>'),
+                                                                                                                                                                shiny::div(id = 'posteriorpredictive_par_edits', class = "panel-collapse collapse in",
+                                                                                                                                                                           
+                                                                                                                                                                           shiny::numericInput(inputId = "posteriorpredictive_plot_margin_bottom", label = "Bottom margin (in inches) of the plot", value = 0.05, min = 0),
+                                                                                                                                                                           shiny::numericInput(inputId = "posteriorpredictive_plot_margin_left", label = "Left margin  (in inches) of the plot", value = 0.45, min = 0),
+                                                                                                                                                                           shiny::numericInput(inputId = "posteriorpredictive_plot_margin_top", label = "Top margin (in inches) of the plot", value = 0.15, min = 0),
+                                                                                                                                                                           shiny::numericInput(inputId = "posteriorpredictive_plot_margin_right", label = "Right margin (in inches) of the plot", value = 0, min = 0)
+                                                                                                                                                                ),
+                                                                                                                                                                
+                                                                                                                                                                shiny::HTML('<div id = "posteriorpredictive_xaxis_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#posteriorpredictive_xaxis_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>X-axis edits</a></p></div>'),
+                                                                                                                                                                shiny::div(id = 'posteriorpredictive_xaxis_edits', class = "panel-collapse collapse in",
+                                                                                                                                                                           
+                                                                                                                                                                           shiny::numericInput(inputId = "posteriorpredictive_plot_xaxis_lab_cex", label = "Cex of prior model name label", value = 1.35, min = 0.1),
+                                                                                                                                                                           shiny::numericInput(inputId = "posteriorpredictive_plot_xaxis_lab_line", label = "Line of prior model name label", value = -2)
+                                                                                                                                                                ),
+                                                                                                                                                                
+                                                                                                                                                                shiny::HTML('<div id = "posteriorpredictive_yaxis_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#posteriorpredictive_yaxis_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>Y-axis edits</a></p></div>'),
+                                                                                                                                                                shiny::div(id = 'posteriorpredictive_yaxis_edits', class = "panel-collapse collapse in",
+                                                                                                                                                                           
+                                                                                                                                                                           shiny::textInput(inputId = "posteriorpredictive_plot_y_lab", label = "Y-axis name", value = ""),
+                                                                                                                                                                           shiny::numericInput(inputId = "posteriorpredictive_plot_y_lab_cex", label = "Cex of Y-axis name", value = 1.6, min = 0.1),
+                                                                                                                                                                           shiny::numericInput(inputId = "posteriorpredictive_plot_y_lab_line", label = "Line of Y-axis name", value = 0.9),
+                                                                                                                                                                           
+                                                                                                                                                                           shiny::numericInput(inputId = "posteriorpredictive_plot_yaxis_lab_cex", label = "Cex of Y-axis label", value = 0.75, min = 0.1),
+                                                                                                                                                                           shiny::numericInput(inputId = "posteriorpredictive_plot_yaxis_lab_line", label = "Line of Y-axis label", value = -1.5)
+                                                                                                                                                                )
+                                                                                                                                                )
+                                                                                                                                                
+                                                                                                                             )
+                                                                                                                             
+                                                                                                             ),
+                                                                                                             
+                                                                                                             shiny::tabPanel(title = "Step 3: Download Output", value = "download_output",
+                                                                                                                             
+                                                                                                                             shiny::tabsetPanel(type = "tabs", id = "posteriorpredictive_downloadoutput_tabs",
+                                                                                                                                                
+                                                                                                                                                shiny::tabPanel(title = "Figure and table", value = "figuretable",
+                                                                                                                                                                shiny::h6(''),
+                                                                                                                                                                shiny::p("Download figure", align = "center", style = "font-size: 95%; font-weight: bold;"),
+                                                                                                                                                                shiny::radioButtons("posteriorpredictive_plot_downloadformat", label = "Format of the figure", choices = c("PDF", "EPS", "PNG", "JPEG", "TIFF"), selected = "PDF", inline = T),
+                                                                                                                                                                shiny::textInput(inputId = "posteriorpredictive_plot_downloadname", label = "Name of the figure (without filename extension, e.g., '.pdf', as it will be appended automatically)", value = "figure"),
+                                                                                                                                                                shiny::downloadButton(outputId = "posteriorpredictive_plot_download", label = "Download"),
+                                                                                                                                                                
+                                                                                                                                                                shiny::h4(''),
+                                                                                                                                                                shiny::p("Download table", align = "center", style = "font-size: 95%; font-weight: bold;"),
+                                                                                                                                                                shiny::radioButtons("posteriorpredictive_table_downloadformat", label = "Format of the table", choices = c("TSV", "CSV"), selected = "TSV", inline = T),
+                                                                                                                                                                shiny::textInput(inputId = "posteriorpredictive_table_downloadname", label = "Name of the table (without filename extension, e.g., '.tsv', as it will be appended automatically)", value = "table"),
+                                                                                                                                                                shiny::downloadButton(outputId = "posteriorpredictive_table_download", label = "Download")
+                                                                                                                                                ),
+                                                                                                                                                
+                                                                                                                                                shiny::tabPanel(title = "Simulated dataset(s)", value = "simdata",
+                                                                                                                                                                shiny::h6(''),
+                                                                                                                                                                shiny::p("Download simulated dataset(s)", align = "center", style = "font-size: 95%; font-weight: bold;"),
+                                                                                                                                                                shiny::textInput(inputId = "posteriorpredictive_simdata_downloadname", label = "Name of the simulated data file (without filename extension, e.g., '.tsv' or '.zip', as it will be appended automatically)", value = "simulated"),
+                                                                                                                                                                shiny::downloadButton(outputId = "posteriorpredictive_simdata_download", label = "Download")
+                                                                                                                                                )
+                                                                                                                             )
+                                                                                                             )
+                                                                                         )
+                                                                        )
+                                                          ),
+                                                          
+                                                          shiny::column(id = "posteriorpredictive_result_column", width = 8, offset = 0, 
+                                                                        style = "padding: 0px 15px 0px 15px; margin: 0%;", 
+                                                                        
+                                                                        shiny::fluidRow(id = "posteriorpredictive_result_div",
                                                                                         
-                                                                            )
-                                                                            
-                                                                   ),
-                                                                   
-                                                                   tabPanel(title = "Step 3: Download Output", value = "download_output",
-                                                                            h6(''),
-                                                                            p("Download figure", align = "center", style = "font-size: 95%; font-weight: bold;"),
-                                                                            radioButtons("focalparamsummary_plot_downloadformat", label = "Format of the figure", choices = c("PDF", "EPS", "PNG", "JPEG", "TIFF"), selected = "PDF", inline = T),
-                                                                            textInput(inputId = "focalparamsummary_plot_downloadname", label = "Name of the figure (without filename extension, e.g., '.pdf', as it will be appended automatically)", value = "figure"),
-                                                                            downloadButton(outputId = "focalparamsummary_plot_download", label = "Download"),
-                                                                            
-                                                                            h4(''),
-                                                                            p("Download table", align = "center", style = "font-size: 95%; font-weight: bold;"),
-                                                                            radioButtons("focalparamsummary_table_downloadformat", label = "Format of the table", choices = c("TSV", "CSV"), selected = "TSV", inline = T),
-                                                                            textInput(inputId = "focalparamsummary_table_downloadname", label = "Name of the table (without filename extension, e.g., '.tsv', as it will be appended automatically)", value = "table"),
-                                                                            downloadButton(outputId = "focalparamsummary_table_download", label = "Download")
-                                                                   )
-                                                                   
-                                                      )
-                                            )
-                                     ),
-                                     
-                                     column(id = "focalparamsummary_result_column", width = 8, offset = 0, 
-                                            style = "padding: 0px 15px 0px 15px; margin: 0%;", 
-                                            
-                                            fluidRow(id = "focalparamsummary_result_div",
-                                                     
-                                                     tabsetPanel(type = "tabs", id = "focalparamsummary_result_tabs",
-                                                                 
-                                                                 tabPanel(title = "Figure", value = "figure",
-                                                                          plotOutput(outputId = "focalparamsummary_plot", height = "auto")
-                                                                 ),
-                                                                 
-                                                                 tabPanel(title = "Table", value = "table",
-                                                                          h6(''),
-                                                                          DT::dataTableOutput(outputId = "focalparamsummary_table")
-                                                                          
-                                                                 )
-                                                                 
-                                                     )
-                                            )
-                                     )
-                                   )
-                          ),
-                          
-                          
-                          tabPanel(title = "Robust Bayesian", value = "focalparam2_summary",
-                                   fluidRow(
-                                     column(width = 4, style = "padding-left: 10px; padding-right: 10px; overflow-y:auto; max-height: 800px;",
-                                            
-                                            wellPanel(style = "background-color: #F2F3F4;",
-                                                      
-                                                      navlistPanel(id = "focalparam2summary_tabs", well = F, widths = c(4, 8), 
-                                                                   
-                                                                   tabPanel(title = "Step 1: Upload Log File(s)", value = "log_input",
-                                                                            h6(""),
-                                                                            
-                                                                            checkboxInput(inputId = "focalparam2summary_logfile_defaultupload", label = "Load example log files", value = F),
-                                                                            
-                                                                            div(id = paste0("focalparam2summary_logfile_div", 1),
-                                                                                fileInput(inputId = paste0("focalparam2summary_logfile", 1), 
-                                                                                          label = paste0("Estimate log file(s) under prior No. ", 1), 
-                                                                                          multiple = T, accept = ".log")
-                                                                            ),
-                                                                            
-                                                                            div(id = "focalparam2summary_loginput_addremove_div",
-                                                                                p("Add or remove prior model", align = "center", style = "font-size: 95%; font-weight: bold;"),
-                                                                                actionButton(inputId = "focalparam2summary_loginput_add", label = "", icon = icon("plus", lib = "glyphicon")),
-                                                                                actionButton(inputId = "focalparam2summary_loginput_remove", label = "", icon = icon("minus", lib = "glyphicon"))
-                                                                            ),
-                                                                            
-                                                                            uiOutput(outputId = "focalparam2summary_paramname_ui"),
-                                                                            actionButton(inputId = "focalparam2summary_startprocessing", label = "Read in the log files and start initial processing")
-                                                                   ),
-                                                                   
-                                                                   tabPanel(title = "Step 2: Configure Post-Processing Settings", value = "processing_settings",
-                                                                            
-                                                                            tabsetPanel(type = "tabs", id = "focalparam2summary_processingsettings_tabs",
-                                                                                        
-                                                                                        tabPanel(title = "Post-processing settings", value = "log_processing",
-                                                                                                 h6(""),
-                                                                                                 
-                                                                                                 checkboxInput(inputId = "focalparam2summary_logcombinereplicates", label = "Combine replicates for all log files", value = F),
-                                                                                                 
-                                                                                                 uiOutput(outputId = "focalparam2summary_logprocessing_ui")
-                                                                                        ),
-                                                                                        
-                                                                                        tabPanel(title = "Edit figure or table", value = "figuresettings_specific",
-                                                                                                 
-                                                                                                 h6(''),
-                                                                                                 uiOutput(outputId = "focalparam2summary_priormodelname_ui"),
-                                                                                                 
-                                                                                                 HTML('<div id = "focalparam2summary_par_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#focalparam2summary_par_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>Margin edits</a></p></div>'),
-                                                                                                 div(id = 'focalparam2summary_par_edits', class = "panel-collapse collapse in",
-                                                                                                     
-                                                                                                     numericInput(inputId = "focalparam2summary_plot_margin_bottom", label = "Bottom margin (in inches) of the plot", value = 0.25, min = 0),
-                                                                                                     numericInput(inputId = "focalparam2summary_plot_margin_left", label = "Left margin  (in inches) of the plot", value = 0.45, min = 0),
-                                                                                                     numericInput(inputId = "focalparam2summary_plot_margin_top", label = "Top margin (in inches) of the plot", value = 0.15, min = 0),
-                                                                                                     numericInput(inputId = "focalparam2summary_plot_margin_right", label = "Right margin (in inches) of the plot", value = 0, min = 0)
-                                                                                                 ),
-                                                                                                 
-                                                                                                 HTML('<div id = "focalparam2summary_xaxis_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#focalparam2summary_xaxis_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>X-axis edits</a></p></div>'),
-                                                                                                 div(id = 'focalparam2summary_xaxis_edits', class = "panel-collapse collapse in",
-                                                                                                     
-                                                                                                     numericInput(inputId = "focalparam2summary_plot_xaxis_lab_cex", label = "Cex of prior model name label", value = 1.35, min = 0.1),
-                                                                                                     numericInput(inputId = "focalparam2summary_plot_xaxis_lab_line", label = "Line of prior model name label", value = -2),
-                                                                                                     
-                                                                                                     numericInput(inputId = "focalparam2summary_plot_xaxis_boxgroup_labcex", label = "Cex of prior or posterior label", value = 1.1, min = 0.1),
-                                                                                                     numericInput(inputId = "focalparam2summary_plot_xaxis_boxgroup_labline", label = "Line of prior or posterior label", value = -2)
-                                                                                                     
-                                                                                                 ),
-                                                                                                 
-                                                                                                 HTML('<div id = "focalparam2summary_yaxis_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#focalparam2summary_yaxis_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>Y-axis edits</a></p></div>'),
-                                                                                                 div(id = 'focalparam2summary_yaxis_edits', class = "panel-collapse collapse in",
-                                                                                                     
-                                                                                                     textInput(inputId = "focalparam2summary_plot_y_lab", label = "Y-axis name", value = ""),
-                                                                                                     numericInput(inputId = "focalparam2summary_plot_y_lab_cex", label = "Cex of Y-axis name", value = 1.6, min = 0.1),
-                                                                                                     numericInput(inputId = "focalparam2summary_plot_y_lab_line", label = "Line of Y-axis name", value = 0.9),
-                                                                                                     
-                                                                                                     checkboxInput(inputId = "focalparam2summary_plot_yaxis_log", label = "Y-axis on the log scale", value = F),
-                                                                                                     numericInput(inputId = "focalparam2summary_plot_yaxis_lab_cex", label = "Cex of Y-axis label", value = 0.75, min = 0.1),
-                                                                                                     numericInput(inputId = "focalparam2summary_plot_yaxis_lab_line", label = "Line of Y-axis label", value = -1.5)
-                                                                                                 )
+                                                                                        shiny::tabsetPanel(type = "tabs", id = "posteriorpredictive_result_tabs",
+                                                                                                           
+                                                                                                           shiny::tabPanel(title = "Figure", value = "figure",
+                                                                                                                           plotOutput(outputId = "posteriorpredictive_plot", height = "auto")
+                                                                                                           ),
+                                                                                                           
+                                                                                                           shiny::tabPanel(title = "Table", value = "table",
+                                                                                                                           shiny::h6(''),
+                                                                                                                           DT::dataTableOutput(outputId = "posteriorpredictive_table")
+                                                                                                                           
+                                                                                                           )
+                                                                                                           
                                                                                         )
-                                                                            )
-                                                                            
-                                                                   ),
-                                                                   
-                                                                   tabPanel(title = "Step 3: Download Output", value = "download_output",
-                                                                            h6(''),
-                                                                            p("Download figure", align = "center", style = "font-size: 95%; font-weight: bold;"),
-                                                                            radioButtons("focalparam2summary_plot_downloadformat", label = "Format of the figure", choices = c("PDF", "EPS", "PNG", "JPEG", "TIFF"), selected = "PDF", inline = T),
-                                                                            textInput(inputId = "focalparam2summary_plot_downloadname", label = "Name of the figure (without filename extension, e.g., '.pdf', as it will be appended automatically)", value = "figure"),
-                                                                            downloadButton(outputId = "focalparam2summary_plot_download", label = "Download"),
-                                                                            
-                                                                            h4(''),
-                                                                            p("Download table", align = "center", style = "font-size: 95%; font-weight: bold;"),
-                                                                            radioButtons("focalparam2summary_table_downloadformat", label = "Format of the table", choices = c("TSV", "CSV"), selected = "TSV", inline = T),
-                                                                            textInput(inputId = "focalparam2summary_table_downloadname", label = "Name of the table (without filename extension, e.g., '.tsv', as it will be appended automatically)", value = "table"),
-                                                                            downloadButton(outputId = "focalparam2summary_table_download", label = "Download")
-                                                                   )
-                                                                   
-                                                      )
-                                            )
-                                     ),
-                                     
-                                     column(id = "focalparam2summary_result_column", width = 8, offset = 0, 
-                                            style = "padding: 0px 15px 0px 15px; margin: 0%;", 
-                                            
-                                            fluidRow(id = "focalparam2summary_result_div",
-                                                     
-                                                     tabsetPanel(type = "tabs", id = "focalparam2summary_result_tabs",
-                                                                 
-                                                                 tabPanel(title = "Figure", value = "figure",
-                                                                          plotOutput(outputId = "focalparam2summary_plot", height = "auto")
-                                                                 ),
-                                                                 
-                                                                 tabPanel(title = "Table", value = "table",
-                                                                          h6(''),
-                                                                          DT::dataTableOutput(outputId = "focalparam2summary_table")
-                                                                          
-                                                                 )
-                                                                 
-                                                     )
-                                            )
-                                     )
-                                   )
-                          ),
-                          
-                          
-                          tabPanel(title = "Posterior-Predictive Checking", value = "posterior_predictive",
-                                   fluidRow(
-                                     column(width = 4, style = "padding-left: 10px; padding-right: 10px; overflow-y:auto; max-height: 800px;",
-                                            
-                                            wellPanel(style = "background-color: #F2F3F4;",
-                                                      
-                                                      navlistPanel(id = "posteriorpredictive_tabs", well = F, widths = c(4, 8), 
-                                                                   
-                                                                   tabPanel(title = "Step 1: Upload Files and Setup Simulations", value = "log_input",
-                                                                            
-                                                                            tabsetPanel(type = "tabs", id = "posteriorpredictive_input_tabs",
-                                                                                        
-                                                                                        tabPanel(title = "Discrete-Geography File", value = "trait",
-                                                                                                 h6(''),
-                                                                                                 
-                                                                                                 checkboxInput(inputId = "posteriorpredictive_geographyfile_defaultupload", label = "Load example discrete-geography file", value = F),
-                                                                                                 
-                                                                                                 div(id = "posteriorpredictive_geographyfile_div", 
-                                                                                                     fileInput("posteriorpredictive_geographyfile", "Choose discrete-geography file", multiple = F, 
-                                                                                                               accept = c("text/csv","text/comma-separated-values,text/plain",".csv", ".txt"))
-                                                                                                 ),
-                                                                                                 div(id = "posteriorpredictive_geographyfile_attributes",
-                                                                                                     checkboxInput(inputId = "posteriorpredictive_geographyfile_header", label = "header", value = T),
-                                                                                                     selectInput(inputId = "posteriorpredictive_geographyfile_taxoncolumn_name", label = "Taxon column name", choices = "", selectize = F),
-                                                                                                     selectInput(inputId = "posteriorpredictive_geographyfile_traitcolumn_name", label = "Discrete-geography column name", choices = "", selectize = F)
-                                                                                                 ),
-                                                                                        ),
-                                                                                        
-                                                                                        tabPanel(title = "Log and Tree Files", value = "logtree",
-                                                                                                 
-                                                                                                 checkboxInput(inputId = "posteriorpredictive_logfile_defaultupload", label = "Load example log and tree files", value = F),
-                                                                                                 
-                                                                                                 div(id = paste0("posteriorpredictive_logfile_div", 1),
-                                                                                                     h6(''),
-                                                                                                     p(paste0("Upload estimate files under prior No. ", 1), align = "center", 
-                                                                                                       style = "font-size: 95%; font-weight: bold;"),
-                                                                                                     fileInput(inputId = paste0("posteriorpredictive_logfile", 1), 
-                                                                                                               label = "log file(s)", 
-                                                                                                               multiple = T, accept = ".log"),
-                                                                                                     fileInput(inputId = paste0("posteriorpredictive_treefile", 1), 
-                                                                                                               label = "tree file(s)",
-                                                                                                               multiple = T, accept = c(".trees", ".tree", ".tre"))
-                                                                                                 ),
-                                                                                                 
-                                                                                                 div(id = "posteriorpredictive_loginput_addremove_div",
-                                                                                                     p("Add or remove prior model", align = "center", style = "font-size: 95%; font-weight: bold;"),
-                                                                                                     actionButton(inputId = "posteriorpredictive_loginput_add", label = "", icon = icon("plus", lib = "glyphicon")),
-                                                                                                     actionButton(inputId = "posteriorpredictive_loginput_remove", label = "", icon = icon("minus", lib = "glyphicon"))
-                                                                                                 )
-                                                                                        ),
-                                                                                        
-                                                                                        tabPanel(title = "Perform Simulations", value = "startsimulations",
-                                                                                                 checkboxInput(inputId = "posteriorpredictive_simulateall",
-                                                                                                               label = "Perform one simulation for each sample", value = T),
-                                                                                                 div(id = "posteriorpredictive_simulatenumber_div",
-                                                                                                     numericInput(inputId = "posteriorpredictive_simulatenumber",
-                                                                                                                  label = "Number of simulations",
-                                                                                                                  value = 100, min = 1, step = 1),
-                                                                                                     p("*sampling with replacement so this number can be greater than the number of samples", style = "font-size:90%; margin-top:-1em;")
-                                                                                                 ),
-                                                                                                 
-                                                                                                 h5(''),
-                                                                                                 actionButton(inputId = "posteriorpredictive_startprocessing", label = "Start posterior-predictive simulation")
-                                                                                        )
-                                                                            )
-                                                                   ),
-                                                                   
-                                                                   tabPanel(title = "Step 2: Summarize Posterior-Predictive Statistics", value = "processing_settings",
-                                                                            
-                                                                            tabsetPanel(type = "tabs", id = "posteriorpredictive_processingsettings_tabs",
-                                                                                        
-                                                                                        tabPanel(title = "Post-processing settings", value = "log_processing",
-                                                                                                 h6(''),
-                                                                                                 
-                                                                                                 radioButtons(inputId = "posteriorpredictive_teststatistic", label = "Choose the summary statistic to plot", 
-                                                                                                              choices = c("Parsimony", "Tip-wise multinomial"), selected = "Parsimony", inline = F),
-                                                                                                 
-                                                                                                 h6(''),
-                                                                                                 checkboxInput(inputId = "posteriorpredictive_logcombinereplicates", label = "Combine replicates for all log files", value = F),
-                                                                                                 
-                                                                                                 uiOutput(outputId = "posteriorpredictive_logprocessing_ui")
-                                                                                        ),
-                                                                                        
-                                                                                        tabPanel(title = "Edit figure or table", value = "figuresettings_specific",
-                                                                                                 
-                                                                                                 h6(''),
-                                                                                                 uiOutput(outputId = "posteriorpredictive_priormodelname_ui"),
-                                                                                                 
-                                                                                                 HTML('<div id = "posteriorpredictive_par_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#posteriorpredictive_par_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>Margin edits</a></p></div>'),
-                                                                                                 div(id = 'posteriorpredictive_par_edits', class = "panel-collapse collapse in",
-                                                                                                     
-                                                                                                     numericInput(inputId = "posteriorpredictive_plot_margin_bottom", label = "Bottom margin (in inches) of the plot", value = 0.05, min = 0),
-                                                                                                     numericInput(inputId = "posteriorpredictive_plot_margin_left", label = "Left margin  (in inches) of the plot", value = 0.45, min = 0),
-                                                                                                     numericInput(inputId = "posteriorpredictive_plot_margin_top", label = "Top margin (in inches) of the plot", value = 0.15, min = 0),
-                                                                                                     numericInput(inputId = "posteriorpredictive_plot_margin_right", label = "Right margin (in inches) of the plot", value = 0, min = 0)
-                                                                                                 ),
-                                                                                                 
-                                                                                                 HTML('<div id = "posteriorpredictive_xaxis_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#posteriorpredictive_xaxis_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>X-axis edits</a></p></div>'),
-                                                                                                 div(id = 'posteriorpredictive_xaxis_edits', class = "panel-collapse collapse in",
-                                                                                                     
-                                                                                                     numericInput(inputId = "posteriorpredictive_plot_xaxis_lab_cex", label = "Cex of prior model name label", value = 1.35, min = 0.1),
-                                                                                                     numericInput(inputId = "posteriorpredictive_plot_xaxis_lab_line", label = "Line of prior model name label", value = -2)
-                                                                                                 ),
-                                                                                                 
-                                                                                                 HTML('<div id = "posteriorpredictive_yaxis_edits_panel" class = "panel-heading"><p style = "font-size: 95%; font-weight: bold;" align="center" class="panel-title"><a data-toggle="collapse" href="#posteriorpredictive_yaxis_edits"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>Y-axis edits</a></p></div>'),
-                                                                                                 div(id = 'posteriorpredictive_yaxis_edits', class = "panel-collapse collapse in",
-                                                                                                     
-                                                                                                     textInput(inputId = "posteriorpredictive_plot_y_lab", label = "Y-axis name", value = ""),
-                                                                                                     numericInput(inputId = "posteriorpredictive_plot_y_lab_cex", label = "Cex of Y-axis name", value = 1.6, min = 0.1),
-                                                                                                     numericInput(inputId = "posteriorpredictive_plot_y_lab_line", label = "Line of Y-axis name", value = 0.9),
-                                                                                                     
-                                                                                                     numericInput(inputId = "posteriorpredictive_plot_yaxis_lab_cex", label = "Cex of Y-axis label", value = 0.75, min = 0.1),
-                                                                                                     numericInput(inputId = "posteriorpredictive_plot_yaxis_lab_line", label = "Line of Y-axis label", value = -1.5)
-                                                                                                 )
-                                                                                        )
-                                                                                        
-                                                                            )
-                                                                            
-                                                                   ),
-                                                                   
-                                                                   tabPanel(title = "Step 3: Download Output", value = "download_output",
-                                                                            
-                                                                            tabsetPanel(type = "tabs", id = "posteriorpredictive_downloadoutput_tabs",
-                                                                                        
-                                                                                        tabPanel(title = "Figure and table", value = "figuretable",
-                                                                                                 h6(''),
-                                                                                                 p("Download figure", align = "center", style = "font-size: 95%; font-weight: bold;"),
-                                                                                                 radioButtons("posteriorpredictive_plot_downloadformat", label = "Format of the figure", choices = c("PDF", "EPS", "PNG", "JPEG", "TIFF"), selected = "PDF", inline = T),
-                                                                                                 textInput(inputId = "posteriorpredictive_plot_downloadname", label = "Name of the figure (without filename extension, e.g., '.pdf', as it will be appended automatically)", value = "figure"),
-                                                                                                 downloadButton(outputId = "posteriorpredictive_plot_download", label = "Download"),
-                                                                                                 
-                                                                                                 h4(''),
-                                                                                                 p("Download table", align = "center", style = "font-size: 95%; font-weight: bold;"),
-                                                                                                 radioButtons("posteriorpredictive_table_downloadformat", label = "Format of the table", choices = c("TSV", "CSV"), selected = "TSV", inline = T),
-                                                                                                 textInput(inputId = "posteriorpredictive_table_downloadname", label = "Name of the table (without filename extension, e.g., '.tsv', as it will be appended automatically)", value = "table"),
-                                                                                                 downloadButton(outputId = "posteriorpredictive_table_download", label = "Download")
-                                                                                        ),
-                                                                                        
-                                                                                        tabPanel(title = "Simulated dataset(s)", value = "simdata",
-                                                                                                 h6(''),
-                                                                                                 p("Download simulated dataset(s)", align = "center", style = "font-size: 95%; font-weight: bold;"),
-                                                                                                 textInput(inputId = "posteriorpredictive_simdata_downloadname", label = "Name of the simulated data file (without filename extension, e.g., '.tsv' or '.zip', as it will be appended automatically)", value = "simulated"),
-                                                                                                 downloadButton(outputId = "posteriorpredictive_simdata_download", label = "Download")
-                                                                                        )
-                                                                            )
-                                                                   )
-                                                      )
-                                            )
-                                     ),
-                                     
-                                     column(id = "posteriorpredictive_result_column", width = 8, offset = 0, 
-                                            style = "padding: 0px 15px 0px 15px; margin: 0%;", 
-                                            
-                                            fluidRow(id = "posteriorpredictive_result_div",
-                                                     
-                                                     tabsetPanel(type = "tabs", id = "posteriorpredictive_result_tabs",
-                                                                 
-                                                                 tabPanel(title = "Figure", value = "figure",
-                                                                          plotOutput(outputId = "posteriorpredictive_plot", height = "auto")
-                                                                 ),
-                                                                 
-                                                                 tabPanel(title = "Table", value = "table",
-                                                                          h6(''),
-                                                                          DT::dataTableOutput(outputId = "posteriorpredictive_table")
-                                                                          
-                                                                 )
-                                                                 
-                                                     )
-                                            )
-                                     )
-                                   )
-                          )
-               ),
-               
-               tabPanel(title = "About", value = "about",
-                        fluidRow(
-                          includeMarkdown(paste0(extdata_path, "tool_input/about.md"))
-                        ))
+                                                                        )
+                                                          )
+                                                        )
+                                        )
+                      ),
+                      
+                      shiny::tabPanel(title = "About", value = "about",
+                                      shiny::fluidRow(
+                                        shiny::includeMarkdown(paste0(extdata_path, "tool_input/about.md"))
+                                      ))
     )
   )
   
-  # Define server logic required to draw a histogram ----
+  # Define server logic
   server <- function(input, output, session) {
     
     # setting default input values
-    input_default <- reactiveValues(model_symmetry = inputdefault_init$model_symmetry, with_bssvs = inputdefault_init$with_bssvs, empiricaltree_mh = inputdefault_init$empiricaltree_mh,
-                                    delta_prior = inputdefault_init$delta_prior, poisson_default = inputdefault_init$poisson_default, poisson_lambda = inputdefault_init$poisson_lambda,
-                                    mu_prior = inputdefault_init$mu_prior, alphaofgamma_mumean = inputdefault_init$alphaofgamma_mumean,
-                                    proposalweight_r = inputdefault_init$proposalweight_r, proposalweight_delta = inputdefault_init$proposalweight_delta, 
-                                    proposalweight_rootfreq = inputdefault_init$proposalweight_rootfreq, 
-                                    proposalweight_pdeltaij = inputdefault_init$proposalweight_pdeltaij, proposalweight_mu = inputdefault_init$proposalweight_mu, 
-                                    proposalweight_mumean = inputdefault_init$proposalweight_mumean, proposalweight_tree = inputdefault_init$proposalweight_tree,
-                                    mcmc_chainlength = inputdefault_init$mcmc_chainlength, mcmc_samplingfreq = inputdefault_init$mcmc_samplingfreq, 
-                                    mcmc_numreplicates = inputdefault_init$mcmc_numreplicates)
+    input_default <- shiny::reactiveValues(model_symmetry = .pkg_env$inputdefault_init$model_symmetry, with_bssvs = .pkg_env$inputdefault_init$with_bssvs, empiricaltree_mh = .pkg_env$inputdefault_init$empiricaltree_mh,
+                                           delta_prior = .pkg_env$inputdefault_init$delta_prior, poisson_default = .pkg_env$inputdefault_init$poisson_default, poisson_lambda = .pkg_env$inputdefault_init$poisson_lambda,
+                                           mu_prior = .pkg_env$inputdefault_init$mu_prior, alphaofgamma_mumean = .pkg_env$inputdefault_init$alphaofgamma_mumean,
+                                           proposalweight_r = .pkg_env$inputdefault_init$proposalweight_r, proposalweight_delta = .pkg_env$inputdefault_init$proposalweight_delta, 
+                                           proposalweight_rootfreq = .pkg_env$inputdefault_init$proposalweight_rootfreq, 
+                                           proposalweight_pdeltaij = .pkg_env$inputdefault_init$proposalweight_pdeltaij, proposalweight_mu = .pkg_env$inputdefault_init$proposalweight_mu, 
+                                           proposalweight_mumean = .pkg_env$inputdefault_init$proposalweight_mumean, proposalweight_tree = .pkg_env$inputdefault_init$proposalweight_tree,
+                                           mcmc_chainlength = .pkg_env$inputdefault_init$mcmc_chainlength, mcmc_samplingfreq = .pkg_env$inputdefault_init$mcmc_samplingfreq, 
+                                           mcmc_numreplicates = .pkg_env$inputdefault_init$mcmc_numreplicates)
     
     # the default value of the poisson lambda depends on the number of states and the symmetry of the matrix
-    observe({
-      req(states_dat())
-      req(input$traitcolumn_name)
-      req(input$model_symmetry)
+    shiny::observe({
+      shiny::req(states_dat())
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$model_symmetry)
       
       states <- sort(as.vector(unique(states_dat()[, input$traitcolumn_name])))
       states <- states[states != "?"]
@@ -822,8 +816,8 @@ run_app <- function() {
     })
     
     # store the analysis specification main tab clicked status
-    maintabs_status <- reactiveValues(step2tab_clicked = F, step3tab_clicked = F, step4tab_clicked = F, step5tab_clicked = F)
-    observeEvent(input$main_tabs, {
+    maintabs_status <- shiny::reactiveValues(step2tab_clicked = F, step3tab_clicked = F, step4tab_clicked = F, step5tab_clicked = F)
+    shiny::observeEvent(input$main_tabs, {
       if (input$main_tabs == "model_specification") {
         maintabs_status$step2tab_clicked <- T
       } else if (input$main_tabs == "analysis_configBasic") {
@@ -836,24 +830,24 @@ run_app <- function() {
     })
     
     # only enable the model specification step when all the input files are in place and valid
-    observe({
+    shiny::observe({
       shinyjs::toggleClass(selector = "#main_tabs li a[data-value=model_specification]", class = "divdisabled", 
                            condition = is.null(states_dat()) || is.null(tree_values$tree) || input_condition$trait_invalid || input_condition$tree_invalid || input_condition$treetrait_invalid)
     })
     
     # only enable the prior specification panel when all the input files are in place and valid
-    observe({
+    shiny::observe({
       shinyjs::toggleClass(id = "analysis_specification_prior", class = "divdisabled", 
                            condition = is.null(states_dat()) || is.null(tree_values$tree) || (!maintabs_status$step2tab_clicked))
     })
     
     # store the analysis specification panel expansion status
-    panel_status <- reactiveValues(priorspecification_expanded = F, methodstemplate_expanded = F, xmlviewer_expanded = F)
+    panel_status <- shiny::reactiveValues(priorspecification_expanded = F, methodstemplate_expanded = F, xmlviewer_expanded = F)
     
     # expand the prior specification panel when all the input files are in place and valid
-    observe({
-      req(states_dat())
-      req(tree_values$tree)
+    shiny::observe({
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       if (maintabs_status$step2tab_clicked && (!panel_status$priorspecification_expanded)) {
         panel_status$priorspecification_expanded <- T
         shinyjs::runjs("$('#prior_specification_panel a')[0].click();")
@@ -861,15 +855,15 @@ run_app <- function() {
     })
     
     # only enable the methods template viewer panel when all the input files are in place
-    observe({
+    shiny::observe({
       shinyjs::toggleClass(id = "methods_template_div", class = "divdisabled", 
                            condition = is.null(states_dat()) || is.null(tree_values$tree))
     })
     
     # expand the methods template viewer panel when all the input files are in place and valid
-    observe({
-      req(states_dat())
-      req(tree_values$tree)
+    shiny::observe({
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       if (!panel_status$methodstemplate_expanded) {
         panel_status$methodstemplate_expanded <- T
         shinyjs::runjs("$('#methods_template_panel a')[0].click();")
@@ -877,7 +871,7 @@ run_app <- function() {
     })
     
     # only enable the xml viewer panel when all the input files are in place
-    observe({
+    shiny::observe({
       shinyjs::toggle(id = "xml_viewer_div", condition = !(is.null(states_dat()) || is.null(tree_values$tree)))
     })
     
@@ -903,16 +897,16 @@ run_app <- function() {
     
     # navigate through the tab of xml viewer and methods template viewer according to the status of the main input panel
     # enable and jump to model and prior tab once the second input panel tab is clicked
-    observe({
+    shiny::observe({
       xmlviewer_modelprior_disabled <- (is.null(states_dat()) || is.null(tree_values$tree) || (!maintabs_status$step2tab_clicked))
       shinyjs::toggleClass(selector = "#xmlviewer_tabs li a[data-value=xmlmodelprior]", class = "divdisabled", 
                            condition = xmlviewer_modelprior_disabled)
       if (!xmlviewer_modelprior_disabled) {
-        updateTabsetPanel(session, inputId = "xmlviewer_tabs", selected = "xmlmodelprior")
+        shiny::updateTabsetPanel(session, inputId = "xmlviewer_tabs", selected = "xmlmodelprior")
       }
     })
     
-    observe({
+    shiny::observe({
       methods_modelprior_disabled <- (is.null(states_dat()) || is.null(tree_values$tree) || (!maintabs_status$step2tab_clicked))
       shinyjs::toggleClass(selector = "#methods_tabs li a[data-value=model]", class = "divdisabled", 
                            condition = methods_modelprior_disabled)
@@ -920,35 +914,35 @@ run_app <- function() {
                            condition = methods_modelprior_disabled)
       
       if (!methods_modelprior_disabled) {
-        updateTabsetPanel(session, inputId = "methods_tabs", selected = "model")
+        shiny::updateTabsetPanel(session, inputId = "methods_tabs", selected = "model")
       }
     })
     
     # only enable the analysis main input panel when the enable button is clicked (when there is some default changes)
     # or the confirm enable button is clicked (when there is no default changes), i.e., 'not overlooked'
-    observe({
+    shiny::observe({
       step3_disabled <- (is.null(states_dat()) || is.null(tree_values$tree) || input$enablestep3_button == 0 || steps_setting$step2_overlooked || steps_setting$prior_overlooked)
       
       shinyjs::toggleClass(selector = "#main_tabs li a[data-value=analysis_configBasic]", class = "divdisabled", 
                            condition = step3_disabled)
       if (!step3_disabled) {
-        updateNavlistPanel(session, inputId = "main_tabs", selected = "analysis_configBasic")
+        shiny::updateNavlistPanel(session, inputId = "main_tabs", selected = "analysis_configBasic")
       }
     })
     
     # enable and jump to analysis tab once the third input panel tab is clicked
-    observe({
+    shiny::observe({
       methods_analysis_disabled <- (is.null(states_dat()) || is.null(tree_values$tree) || (!maintabs_status$step3tab_clicked))
       shinyjs::toggleClass(selector = "#methods_tabs li a[data-value=analysis]", class = "divdisabled", 
                            condition = methods_analysis_disabled)
       
       if (!methods_analysis_disabled) {
-        updateTabsetPanel(session, inputId = "methods_tabs", selected = "analysis")
+        shiny::updateTabsetPanel(session, inputId = "methods_tabs", selected = "analysis")
       }
     })
     
-    observe({
-      req(tree_values$tree)
+    shiny::observe({
+      shiny::req(tree_values$tree)
       maintabs_status$step3tab_clicked
       
       xmlviewer_mcmc_disabled <- (is.null(states_dat()) || is.null(tree_values$tree) || (!maintabs_status$step3tab_clicked))
@@ -956,64 +950,64 @@ run_app <- function() {
       shinyjs::toggleClass(selector = "#xmlviewer_tabs li a[data-value=xmlmcmc]", class = "divdisabled", 
                            condition = xmlviewer_mcmc_disabled)
       if (!xmlviewer_mcmc_disabled) {
-        updateTabsetPanel(session, inputId = "xmlviewer_tabs", selected = "xmlmcmc")
+        shiny::updateTabsetPanel(session, inputId = "xmlviewer_tabs", selected = "xmlmcmc")
       }
     })
     
     # enable and jump to proposal tab once the proposal input panel tab is clicked
-    analysisconfigBasictabs_status <- reactiveValues(proposalweightstab_clicked = F)
-    observeEvent(input$analysisconfigBasic_tabs, {
+    analysisconfigBasictabs_status <- shiny::reactiveValues(proposalweightstab_clicked = F)
+    shiny::observeEvent(input$analysisconfigBasic_tabs, {
       if (input$analysisconfigBasic_tabs == "proposalweights") {
         analysisconfigBasictabs_status$proposalweightstab_clicked <- T
       }
     })
     
-    observe({
+    shiny::observe({
       xmlviewer_proposal_disabled <- (is.null(states_dat()) || is.null(tree_values$tree) || (!maintabs_status$step3tab_clicked))
       shinyjs::toggleClass(selector = "#xmlviewer_tabs li a[data-value=xmlproposal]", class = "divdisabled", 
                            condition = xmlviewer_proposal_disabled)
       
       if ((!xmlviewer_proposal_disabled) && analysisconfigBasictabs_status$proposalweightstab_clicked) {
-        updateTabsetPanel(session, inputId = "xmlviewer_tabs", selected = "xmlproposal")
+        shiny::updateTabsetPanel(session, inputId = "xmlviewer_tabs", selected = "xmlproposal")
       }
     })
     
     # only enable the analysis advanced main input panel when the enable button is clicked (when there is some default changes)
     # or the confirm enable button is clicked (when there is no default changes), i.e., 'not overlooked'
-    observe({
+    shiny::observe({
       step4_disabled <- (is.null(states_dat()) || is.null(tree_values$tree) || input$enablestep4_button == 0 || steps_setting$step3_overlooked)
       
       shinyjs::toggleClass(selector = "#main_tabs li a[data-value=analysis_configAdvanced]", class = "divdisabled", 
                            condition = step4_disabled)
       if (!step4_disabled) {
-        updateNavlistPanel(session, inputId = "main_tabs", selected = "analysis_configAdvanced")
+        shiny::updateNavlistPanel(session, inputId = "main_tabs", selected = "analysis_configAdvanced")
       }
     })
     
-    observe({
+    shiny::observe({
       xmlviewer_phyloctmc_disabled <- (is.null(states_dat()) || is.null(tree_values$tree) || (!maintabs_status$step4tab_clicked))
       shinyjs::toggleClass(selector = "#xmlviewer_tabs li a[data-value=xmlphyloctmc]", class = "divdisabled", 
                            condition = xmlviewer_phyloctmc_disabled)
       if (!xmlviewer_phyloctmc_disabled) {
-        updateTabsetPanel(session, inputId = "xmlviewer_tabs", selected = "xmlphyloctmc")
+        shiny::updateTabsetPanel(session, inputId = "xmlviewer_tabs", selected = "xmlphyloctmc")
       }
     })
     
     # only show the power posterior panel when marginal likelihood analysis is selected 
-    xmlviewertabs_status <- reactiveValues(powerposteriortab_clicked = F)
-    observeEvent(input$further_analysis, {
+    xmlviewertabs_status <- shiny::reactiveValues(powerposteriortab_clicked = F)
+    shiny::observeEvent(input$further_analysis, {
       xmlviewer_powerposterior_disabled <- (is.null(states_dat()) || is.null(tree_values$tree) || 
                                               (!maintabs_status$step4tab_clicked) || ((!is.null(input$further_analysis)) && input$further_analysis != "Marginal likehood estimation"))
       shinyjs::toggle(selector = "#xmlviewer_tabs li a[data-value=xmlpowerposterior]", condition = !xmlviewer_powerposterior_disabled)
       if (!xmlviewer_powerposterior_disabled) {
-        updateTabsetPanel(session, inputId = "xmlviewer_tabs", selected = "xmlpowerposterior")
+        shiny::updateTabsetPanel(session, inputId = "xmlviewer_tabs", selected = "xmlpowerposterior")
         xmlviewertabs_status$powerposteriortab_clicked <- T
       }
     })
     
-    observeEvent(input$further_analysis, {
+    shiny::observeEvent(input$further_analysis, {
       if ((!is.null(input$further_analysis)) && (input$further_analysis != "Marginal likehood estimation") && (input$xmlviewer_tabs == "xmlpowerposterior")) {
-        updateTabsetPanel(session, inputId = "xmlviewer_tabs", selected = "xmlphyloctmc")
+        shiny::updateTabsetPanel(session, inputId = "xmlviewer_tabs", selected = "xmlphyloctmc")
         xmlviewertabs_status$powerposteriortab_clicked <- F
       }
     })
@@ -1021,56 +1015,56 @@ run_app <- function() {
     
     # only enable the download main input panel when the enable button is clicked (when there is some default changes)
     # or the confirm enable button is clicked (when there is no default changes), i.e., 'not overlooked'
-    observe({
+    shiny::observe({
       step5_disabled <- (is.null(states_dat()) || is.null(tree_values$tree) || input$enablestep5_button == 0 || steps_setting$step4_overlooked)
       
       shinyjs::toggleClass(selector = "#main_tabs li a[data-value=src_export]", class = "divdisabled", 
                            condition = step5_disabled)
       if (!step5_disabled) {
-        updateNavlistPanel(session, inputId = "main_tabs", selected = "src_export")
+        shiny::updateNavlistPanel(session, inputId = "main_tabs", selected = "src_export")
       }
     })
     
     # enable and jump to full tab once the download input panel tab is clicked
-    observe({
+    shiny::observe({
       xmlviewer_full_disabled <- (is.null(states_dat()) || is.null(tree_values$tree) || (!maintabs_status$step5tab_clicked))
       shinyjs::toggleClass(selector = "#xmlviewer_tabs li a[data-value=xmlfull]", class = "divdisabled", 
                            condition = xmlviewer_full_disabled)
       if (!xmlviewer_full_disabled) {
-        updateTabsetPanel(session, inputId = "xmlviewer_tabs", selected = "xmlfull")
+        shiny::updateTabsetPanel(session, inputId = "xmlviewer_tabs", selected = "xmlfull")
       }
     })
     
-    observe({
+    shiny::observe({
       methods_full_disabled <- (is.null(states_dat()) || is.null(tree_values$tree) || (!maintabs_status$step5tab_clicked))
       shinyjs::toggleClass(selector = "#methods_tabs li a[data-value=full]", class = "divdisabled", 
                            condition = methods_full_disabled)
       
       if (!methods_full_disabled) {
-        updateTabsetPanel(session, inputId = "methods_tabs", selected = "full")
+        shiny::updateTabsetPanel(session, inputId = "methods_tabs", selected = "full")
       }
     })
     
     # helper variables for determining whether any default input values have changed and if the confirm button is clicked 
     # so that it will be overlooked
-    steps_setting <- reactiveValues(step2_overlooked = T, step2_default = T, 
-                                    step3_overlooked = T, step3_default = T, 
-                                    step4_overlooked = T, step4_default = T,
-                                    prior_overlooked = T, prior_default = T,
-                                    all_overlooked = T, all_default = T)
+    steps_setting <- shiny::reactiveValues(step2_overlooked = T, step2_default = T, 
+                                           step3_overlooked = T, step3_default = T, 
+                                           step4_overlooked = T, step4_default = T,
+                                           prior_overlooked = T, prior_default = T,
+                                           all_overlooked = T, all_default = T)
     
     # step 2 button, to enable step 3
-    observeEvent(input$enablestep3_button, {
+    shiny::observeEvent(input$enablestep3_button, {
       
-      req(tree_values$tree)
-      req(input$model_symmetry)
-      req(input$delta_prior)
-      req(input$mu_prior)
-      req(tree_values$tree)
-      req(states_dat())
-      req(!input_condition$trait_invalid)
-      req(!input_condition$tree_invalid)
-      req(!input_condition$treetrait_invalid)
+      shiny::req(tree_values$tree)
+      shiny::req(input$model_symmetry)
+      shiny::req(input$delta_prior)
+      shiny::req(input$mu_prior)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(!input_condition$trait_invalid)
+      shiny::req(!input_condition$tree_invalid)
+      shiny::req(!input_condition$treetrait_invalid)
       
       # compare to default
       if ((input$model_symmetry != input_default$model_symmetry) || (input$with_bssvs != input_default$with_bssvs)) {
@@ -1095,38 +1089,38 @@ run_app <- function() {
       names(modalspec_filler) <- c(paste0(T, F), paste0(F, T), paste0(T, T))
       
       if (steps_setting$step2_overlooked || steps_setting$prior_overlooked) {
-        showModal(modalDialog(paste0("The current ", modalspec_filler[paste0(steps_setting$step2_overlooked, steps_setting$prior_overlooked)],
-                                     " identical to the default setting. Still Proceeding to next step?"),
-                              title = "Warning: no default value changed",
-                              footer = tagList(actionButton(inputId = "enablestep3_confirm_button", label = "Yes"),
-                                               modalButton("No")),
-                              easyClose = F,
-                              size = "m"
+        shiny::showModal(modalDialog(paste0("The current ", modalspec_filler[paste0(steps_setting$step2_overlooked, steps_setting$prior_overlooked)],
+                                            " identical to the default setting. Proceed to the next step?"),
+                                     title = "Warning: no default value changed",
+                                     footer = shiny::tagList(actionButton(inputId = "enablestep3_confirm_button", label = "Yes"),
+                                                             modalButton("No")),
+                                     easyClose = F,
+                                     size = "m"
         ))
       }
       
     })
     
     # click the confirm button then that means they are not overlooked
-    observeEvent(input$enablestep3_confirm_button, {
+    shiny::observeEvent(input$enablestep3_confirm_button, {
       steps_setting$step2_overlooked <- F
       steps_setting$prior_overlooked <- F
       removeModal()
     })
     
     # step 3 button, to enable step 4
-    observeEvent(input$enablestep4_button, {
+    shiny::observeEvent(input$enablestep4_button, {
       
-      req(input$model_symmetry)
-      req(input$delta_prior)
-      req(input$mu_prior)
-      req(input$proposalweight_r)
-      req(input$proposalweight_mu)
-      req(tree_values$tree)
-      req(states_dat())
-      req(!input_condition$trait_invalid)
-      req(!input_condition$tree_invalid)
-      req(!input_condition$treetrait_invalid)
+      shiny::req(input$model_symmetry)
+      shiny::req(input$delta_prior)
+      shiny::req(input$mu_prior)
+      shiny::req(input$proposalweight_r)
+      shiny::req(input$proposalweight_mu)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(!input_condition$trait_invalid)
+      shiny::req(!input_condition$tree_invalid)
+      shiny::req(!input_condition$treetrait_invalid)
       
       # compare to default
       if ((input$mcmc_chainlength != input_default$mcmc_chainlength) || (input$mcmc_samplingfreq != input_default$mcmc_samplingfreq) || (input$mcmc_numreplicates != input_default$mcmc_numreplicates)) {
@@ -1149,53 +1143,53 @@ run_app <- function() {
       }
       
       if (steps_setting$step3_overlooked) {
-        showModal(modalDialog("The current basic analysis configuration is identical to the default setting. Still Proceeding to next step?",
-                              title = "Warning: no default value changed",
-                              footer = tagList(actionButton(inputId = "enablestep4_confirm_button", label = "Yes"),
-                                               modalButton("No")),
-                              easyClose = F,
-                              size = "m"
+        shiny::showModal(modalDialog("The current basic analysis configuration is identical to the default setting. Proceed to the next step?",
+                                     title = "Warning: no default value changed",
+                                     footer = shiny::tagList(actionButton(inputId = "enablestep4_confirm_button", label = "Yes"),
+                                                             modalButton("No")),
+                                     easyClose = F,
+                                     size = "m"
         ))
       }
       
     })
     
     # click the confirm button then that means they are not overlooked
-    observeEvent(input$enablestep4_confirm_button, {
+    shiny::observeEvent(input$enablestep4_confirm_button, {
       steps_setting$step3_overlooked <- F
       removeModal()
     })
     
     # step 4 button, to enable step 5
-    observeEvent(input$enablestep5_button, {
-      req(tree_values$tree)
-      req(states_dat())
+    shiny::observeEvent(input$enablestep5_button, {
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
       
       if (input$do_stochasticmapping != "" || input$further_analysis != "") {
         steps_setting$step4_overlooked <- steps_setting$step4_default <- steps_setting$all_default <- F
       }
       
       if (steps_setting$step4_overlooked) {
-        showModal(modalDialog("The current advanced analysis configuration is identical to the default setting. Still Proceeding to next step?",
-                              title = "Warning: no default value changed",
-                              footer = tagList(actionButton(inputId = "enablestep5_confirm_button", label = "Yes"),
-                                               modalButton("No")),
-                              easyClose = F,
-                              size = "m"
+        shiny::showModal(modalDialog("The current advanced analysis configuration is identical to the default setting. Proceed to the next step?",
+                                     title = "Warning: no default value changed",
+                                     footer = shiny::tagList(actionButton(inputId = "enablestep5_confirm_button", label = "Yes"),
+                                                             modalButton("No")),
+                                     easyClose = F,
+                                     size = "m"
         ))
       }
       
     })
     
     # click the confirm button then that means they are not overlooked
-    observeEvent(input$enablestep5_confirm_button, {
+    shiny::observeEvent(input$enablestep5_confirm_button, {
       steps_setting$step4_overlooked <- F
       removeModal()
     })
     
     
     # remove/hide those buttons once we have proceeded to the corresponding tab
-    observeEvent(input$main_tabs, {
+    shiny::observeEvent(input$main_tabs, {
       if (input$main_tabs == "analysis_configBasic") {
         shinyjs::hide(id = "enablestep3_button")
       } else if (input$main_tabs == "analysis_configAdvanced") {
@@ -1206,19 +1200,19 @@ run_app <- function() {
     })
     
     # compare to default for all (check before download)
-    observe({
+    shiny::observe({
       
-      req(input$model_symmetry)
-      req(input$delta_prior)
-      req(input$mu_prior)
-      req(input$proposalweight_r)
-      req(input$proposalweight_mu)
-      req(tree_values$tree)
-      req(states_dat())
-      req(!input_condition$trait_invalid)
-      req(!input_condition$tree_invalid)
-      req(!input_condition$treetrait_invalid)
-      req(input$enablestep5_button)
+      shiny::req(input$model_symmetry)
+      shiny::req(input$delta_prior)
+      shiny::req(input$mu_prior)
+      shiny::req(input$proposalweight_r)
+      shiny::req(input$proposalweight_mu)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(!input_condition$trait_invalid)
+      shiny::req(!input_condition$tree_invalid)
+      shiny::req(!input_condition$treetrait_invalid)
+      shiny::req(input$enablestep5_button)
       
       if (steps_setting$all_default) {
         
@@ -1256,97 +1250,97 @@ run_app <- function() {
     
     # if nothing changed, poping up the warning message
     # the fake button is identical to the corresponding real button except that it would produce the message
-    observe({
+    shiny::observe({
       shinyjs::toggle(id = "downloadxml_fake", condition = steps_setting$all_overlooked)
       shinyjs::toggle(id = "downloadxml_real", condition = !steps_setting$all_overlooked)
     })
     
-    observeEvent(input$downloadxml_fake, {
-      showModal(modalDialog("Current settings are all identical to the default.",
-                            title = "Warning: no default value changed",
-                            footer = tagList(downloadButton(outputId = "downloadxml_faketoreal", label = "Still download"),
-                                             modalButton("Close this")),
-                            easyClose = F,
-                            size = "m"
+    shiny::observeEvent(input$downloadxml_fake, {
+      shiny::showModal(modalDialog("Current settings are all identical to the default.",
+                                   title = "Warning: no default value changed",
+                                   footer = shiny::tagList(downloadButton(outputId = "downloadxml_faketoreal", label = "Still download"),
+                                                           modalButton("Close this")),
+                                   easyClose = F,
+                                   size = "m"
       ))
     })
     
-    observe({
+    shiny::observe({
       shinyjs::toggle(id = "downloadmethods_fake", condition = steps_setting$all_overlooked)
       shinyjs::toggle(id = "downloadmethods_real", condition = !steps_setting$all_overlooked)
     })
     
-    observeEvent(input$downloadmethods_fake, {
-      showModal(modalDialog("Current settings are all identical to the default.",
-                            title = "Warning: no default value changed",
-                            footer = tagList(downloadButton(outputId = "downloadmethods_faketoreal", label = "Still download"),
-                                             modalButton("Close this")),
-                            easyClose = F,
-                            size = "m"
+    shiny::observeEvent(input$downloadmethods_fake, {
+      shiny::showModal(modalDialog("Current settings are all identical to the default.",
+                                   title = "Warning: no default value changed",
+                                   footer = shiny::tagList(downloadButton(outputId = "downloadmethods_faketoreal", label = "Still download"),
+                                                           modalButton("Close this")),
+                                   easyClose = F,
+                                   size = "m"
       ))
     })
     
     # some sanity check to ensure the input values are valid
-    observe({
+    shiny::observe({
       
       if ((!is.integer(input$mcmc_chainlength)) || input$mcmc_chainlength <= 0) {
-        showModal(modalDialog("MCMC chain length has to be a postive integer.",
-                              title = "Invalid input",
-                              easyClose = F,
-                              size = "s"
-                              
+        shiny::showModal(modalDialog("MCMC chain length has to be a postive integer.",
+                                     title = "Invalid input",
+                                     easyClose = F,
+                                     size = "s"
+                                     
         ))
       }
       
       if ((!is.integer(input$mcmc_samplingfreq)) || input$mcmc_samplingfreq <= 0) {
-        showModal(modalDialog("MCMC sampling frequency has to be a positive integer.",
-                              title = "Invalid input",
-                              easyClose = F,
-                              size = "s"
-                              
+        shiny::showModal(modalDialog("MCMC sampling frequency has to be a positive integer.",
+                                     title = "Invalid input",
+                                     easyClose = F,
+                                     size = "s"
+                                     
         ))
       }
       
       if ((!is.integer(input$mcmc_numreplicates))  || input$mcmc_numreplicates <= 0) {
-        showModal(modalDialog("Number of analysis replicates has to be a positive integer.",
-                              title = "Invalid input",
-                              easyClose = F,
-                              size = "s"
-                              
+        shiny::showModal(modalDialog("Number of analysis replicates has to be a positive integer.",
+                                     title = "Invalid input",
+                                     easyClose = F,
+                                     size = "s"
+                                     
         ))
       }
     })
     
     # enable the geography attributes input once the geography input file is uploaded
     # as some of the options of the input fields depend on the input file
-    observe({
+    shiny::observe({
       shinyjs::toggle(id = "geographyfile_attributes", condition = !is.null(states_dat()))
     })
     
     # enable the markov jump options (between each pair and/or total) only when the user choose to do stochastic mapping
-    observe({
+    shiny::observe({
       shinyjs::toggle(id = "markovjumps_totalpairwise", condition = (input$do_stochasticmapping != ""))
     })
     
-    observe({
+    shiny::observe({
       if ((!is.null(input$do_stochasticmapping)) && (input$do_stochasticmapping != "") && 
           (input$do_stochasticmapping == "Fast stochastic mapping (incomplete history, simulation-free)") && (input$markovjumps_total + input$markovjumps_pairwise == 0)) {
         
-        showModal(modalDialog("If neither total number of dispersal events between all areas nor the number of dispersal events between each pair of areas is estimated, then the fast stochastic mapping algorithm won't be performed",
-                              title = "Warning",
-                              easyClose = F,
-                              size = "m"
-                              
+        shiny::showModal(modalDialog("If neither total number of dispersal events between all areas nor the number of dispersal events between each pair of areas is estimated, then the fast stochastic mapping algorithm won't be performed",
+                                     title = "Warning",
+                                     easyClose = F,
+                                     size = "m"
+                                     
         ))
       }
     })
     
     # render the further analysis panel according to what kind of further analysis user wants to do
     output$furtheranalysis_ui <- renderUI({
-      req(states_dat())
-      req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       
-      furtheranalysis_ui_list <- tagList()
+      furtheranalysis_ui_list <- shiny::tagList()
       if (input$further_analysis == "Data cloning") {
         
         furtheranalysis_ui_list <- tagAppendChildren(furtheranalysis_ui_list, 
@@ -1354,10 +1348,10 @@ run_app <- function() {
                                                      numericInput(inputId = paste0("lheats", 1), label = paste0("Clone number for data-cloning analysis No. ", 1), 
                                                                   value = 5, min = 1),
                                                      
-                                                     div(id = "lheats_addremove_div",
-                                                         p("Add different number of clones", align = "center", style = "font-size: 95%; font-weight: bold;"),
-                                                         actionButton(inputId = "lheats_add", label = "", icon = icon("plus", lib = "glyphicon")),
-                                                         actionButton(inputId = "lheats_remove", label = "", icon = icon("minus", lib = "glyphicon")))
+                                                     shiny::div(id = "lheats_addremove_div",
+                                                                p("Add different number of clones", align = "center", style = "font-size: 95%; font-weight: bold;"),
+                                                                shiny::actionButton(inputId = "lheats_add", label = "", icon = icon("plus", lib = "glyphicon")),
+                                                                shiny::actionButton(inputId = "lheats_remove", label = "", icon = icon("minus", lib = "glyphicon")))
         )
         
         
@@ -1374,15 +1368,15 @@ run_app <- function() {
     })
     
     # dynamically rendering the fields for lheat so that user can specify a sequence of clones
-    lheats <- reactiveValues(num = 1)
-    observeEvent(input$lheats_add, {
+    lheats <- shiny::reactiveValues(num = 1)
+    shiny::observeEvent(input$lheats_add, {
       lheats$num <- lheats$num + 1
       insertUI(selector = "#lheats_addremove_div", where = "beforeBegin", 
-               ui = div(id = paste0("lheats_div", lheats$num),
-                        numericInput(inputId = paste0("lheats", lheats$num), 
-                                     label = paste0("Clone number for data-cloning analysis No. ", lheats$num), value = 5, min = 1)))
+               ui = shiny::div(id = paste0("lheats_div", lheats$num),
+                               numericInput(inputId = paste0("lheats", lheats$num), 
+                                            label = paste0("Clone number for data-cloning analysis No. ", lheats$num), value = 5, min = 1)))
     })
-    observeEvent(input$lheats_remove, {
+    shiny::observeEvent(input$lheats_remove, {
       if (lheats$num > 1) {
         removeUI(selector = paste0("#lheats_div", lheats$num))
         lheats$num <- lheats$num - 1
@@ -1392,9 +1386,9 @@ run_app <- function() {
     # powers (of the power posterior distributions) plot
     output$powerbeta_plot <- renderPlot({
       
-      req(states_dat())
-      req(tree_values$tree)
-      req(input$further_analysis)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
+      shiny::req(input$further_analysis)
       
       ml_numstones <- 100
       if (!is.null(input$ml_numstones)) ml_numstones <- input$ml_numstones
@@ -1416,17 +1410,17 @@ run_app <- function() {
     
     
     # input sanity check
-    observe({
+    shiny::observe({
       if (input$further_analysis == "Data cloning") {
         
         for (i in 1:lheats$num) {
           if ((paste0("lheats", i) %in% names(input)) && (!is.null(input[[paste0("lheats", i)]])) && 
               ((!is.integer(input[[paste0("lheats", i)]])) || input[[paste0("lheats", i)]] <= 1)) {
-            showModal(modalDialog("Number of clones needs to be an integer greater than 1.",
-                                  title = "Invalid input",
-                                  easyClose = F,
-                                  size = "m"
-                                  
+            shiny::showModal(modalDialog("Number of clones needs to be an integer greater than 1.",
+                                         title = "Invalid input",
+                                         easyClose = F,
+                                         size = "m"
+                                         
             ))
             break
           }
@@ -1434,52 +1428,52 @@ run_app <- function() {
       }
     })
     
-    observe({
+    shiny::observe({
       
       if ("Marginal likehood estimation" %in% input$further_analysis) {
         
-        req(input$ml_numstones)
-        req(input$ml_chainlengthperstone)
-        req(input$ml_samplingfreq)
-        req(input$ml_alphaofbeta)
+        shiny::req(input$ml_numstones)
+        shiny::req(input$ml_chainlengthperstone)
+        shiny::req(input$ml_samplingfreq)
+        shiny::req(input$ml_alphaofbeta)
         
         if ((!is.integer(input$ml_numstones)) || input$ml_numstones < 1) {
-          showModal(modalDialog("Number of power posterior steps needs to be an integer greater than 1.",
-                                title = "Invalid input",
-                                easyClose = F,
-                                size = "m"
-                                
+          shiny::showModal(modalDialog("Number of power posterior steps needs to be an integer greater than 1.",
+                                       title = "Invalid input",
+                                       easyClose = F,
+                                       size = "m"
+                                       
           ))
         }
         if ((!is.integer(input$ml_chainlengthperstone)) || input$ml_chainlengthperstone < 1) {
-          showModal(modalDialog("Chain length per power posterior step needs to be an integer greater than 1.",
-                                title = "Invalid input",
-                                easyClose = F,
-                                size = "m"
-                                
+          shiny::showModal(modalDialog("Chain length per power posterior step needs to be an integer greater than 1.",
+                                       title = "Invalid input",
+                                       easyClose = F,
+                                       size = "m"
+                                       
           ))
         }
         if ((!is.integer(input$ml_samplingfreq)) || input$ml_samplingfreq < 1) {
-          showModal(modalDialog("Sampling frequency of the power posterior chains needs to be an integer greater than 1.",
-                                title = "Invalid input",
-                                easyClose = F,
-                                size = "m"
-                                
+          shiny::showModal(modalDialog("Sampling frequency of the power posterior chains needs to be an integer greater than 1.",
+                                       title = "Invalid input",
+                                       easyClose = F,
+                                       size = "m"
+                                       
           ))
         }
         if (input$ml_alphaofbeta <= 0) {
-          showModal(modalDialog("Alpha of the beta distribution needs to be positive.",
-                                title = "Invalid input",
-                                easyClose = F,
-                                size = "m"
-                                
+          shiny::showModal(modalDialog("Alpha of the beta distribution needs to be positive.",
+                                       title = "Invalid input",
+                                       easyClose = F,
+                                       size = "m"
+                                       
           ))
         }
       }
     })
     
     # enable the tree input tab only after user uploads the discrete-trait file (and it's valid)
-    observe({
+    shiny::observe({
       shinyjs::toggleClass(id = "geography_file_div", class = "divdisabled", 
                            condition = input$geography_file_defaultupload)
     })
@@ -1487,11 +1481,11 @@ run_app <- function() {
     # reading in discrete-trait data
     # assume there is only one discrete trait for now, could be easily relaxed
     states_dat <- reactiveVal()
-    observe({
+    shiny::observe({
       if (input$geography_file_defaultupload) {
         states_dat(read.table(text = gsub("\t", ",", readLines(paste0(extdata_path, "analyses_setup/discrete_trait.txt"))), header = T, sep = ",", stringsAsFactors = F))
       } else if (!is.null(input$geography_file)) {
-        req(input$geography_file)
+        shiny::req(input$geography_file)
         states_dat(read.table(text = gsub("\t", ",", readLines(input$geography_file$datapath)), header = T, sep = ",", stringsAsFactors = F))
       } else {
         states_dat(NULL)
@@ -1499,18 +1493,18 @@ run_app <- function() {
     })
     
     # check for valid input
-    input_condition <- reactiveValues(tree_invalid = T, trait_invalid = T, treetrait_invalid = T)
+    input_condition <- shiny::reactiveValues(tree_invalid = T, trait_invalid = T, treetrait_invalid = T)
     
     # make sure the discrete-trait input file has header, and then update the column name input fields accordingly
-    observe({
-      req(states_dat())
+    shiny::observe({
+      shiny::req(states_dat())
       
       if (!input$geographyfile_header) {
-        showModal(modalDialog("Please edit the discrete-geography file so that the first row indicates column names.",
-                              title = "Invalid input",
-                              easyClose = F,
-                              size = "m"
-                              
+        shiny::showModal(modalDialog("Please edit the discrete-geography file so that the first row indicates column names.",
+                                     title = "Invalid input",
+                                     easyClose = F,
+                                     size = "m"
+                                     
         ))
         input_condition$trait_invalid <- T
       } else {
@@ -1522,24 +1516,24 @@ run_app <- function() {
     })
     
     # enable the tree input tab only after user uploads the discrete-trait file (and it's valid)
-    observe({
+    shiny::observe({
       shinyjs::toggleClass(selector = "#datainput_tabs li a[data-value=tree]", class = "divdisabled", 
                            condition = is.null(states_dat()) || (!input$geographyfile_header) || 
                              is.null(input$taxoncolumn_name) || is.null(input$traitcolumn_name)  || input_condition$trait_invalid)
     })
     
-    observe({
+    shiny::observe({
       shinyjs::toggle(id = "tree_num_defaultupload_div", condition = input$tree_file_defaultupload)
     })
     
-    observe({
+    shiny::observe({
       shinyjs::toggleClass(id = "tree_file_div", class = "divdisabled", condition = input$tree_file_defaultupload)
     })
     
     # read in the tree or the first two trees (if there are multiple trees)
-    tree_values <- reactiveValues(tree = NULL, tree_num = 0, tree_length = 0)
+    tree_values <- shiny::reactiveValues(tree = NULL, tree_num = 0, tree_length = 0)
     tree_paths_defaultupload <- paste0(extdata_path, c("analyses_setup/HIV_datasetA_sample.trees", "analyses_setup/HIV_datasetA_MCC.tree"))
-    observe({
+    shiny::observe({
       
       input_condition$tree_invalid <- F
       
@@ -1555,7 +1549,7 @@ run_app <- function() {
         }
         
       } else {
-        req(input$tree_file)
+        shiny::req(input$tree_file)
         
         tree_tmp <- readtreefile_linebyline(filepath = input$tree_file$datapath)
         tree_values$tree_num <- max(grep("&", tree_tmp)) - min(grep("&", tree_tmp)) + 1L
@@ -1572,20 +1566,20 @@ run_app <- function() {
         } else {
           input_condition$tree_invalid <- T
           
-          showModal(modalDialog("No tree in the uploaded tree file.",
-                                title = "Invalid input",
-                                easyClose = F,
-                                size = "s"
+          shiny::showModal(modalDialog("No tree in the uploaded tree file.",
+                                       title = "Invalid input",
+                                       easyClose = F,
+                                       size = "s"
           ))
         }
       }
     })
     
     # sanity check: tree and discrete data match in terms of taxon list
-    observe({
-      req(input$taxoncolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
+    shiny::observe({
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
       
       if (tree_values$tree_num > 1) {
         tip_lab <- sort(tree_values$tree[[1]]$tip.label)
@@ -1597,11 +1591,11 @@ run_app <- function() {
         taxa <- sort(as.vector(states_dat()[, input$taxoncolumn_name]))
         
         if (!identical(tip_lab, taxa)) {
-          showModal(modalDialog("Taxa list in the tree file doesn't match the discrete-geography file.",
-                                title = "Invalid input",
-                                easyClose = F,
-                                size = "m"
-                                
+          shiny::showModal(modalDialog("Taxa list in the tree file doesn't match the discrete-geography file.",
+                                       title = "Invalid input",
+                                       easyClose = F,
+                                       size = "m"
+                                       
           ))
           input_condition$treetrait_invalid <- T
         } else {
@@ -1611,16 +1605,16 @@ run_app <- function() {
     })
     
     # update the output files name according to the input file
-    observe({
-      req(input$traitcolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
+    shiny::observe({
+      shiny::req(input$traitcolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
       
       if (input$tree_file_defaultupload) {
-        req(input$tree_num_defaultupload)
+        shiny::req(input$tree_num_defaultupload)
         file_name <- basename(ifelse(input$tree_num_defaultupload == "distribution (multiple)", tree_paths_defaultupload[1], tree_paths_defaultupload[2]))
       } else {
-        req(input$tree_file)
+        shiny::req(input$tree_file)
         file_name <- input$tree_file$name
       }
       file_name <- paste0(unlist(strsplit(file_name, "\\."))[1], "_", input$traitcolumn_name)
@@ -1630,13 +1624,13 @@ run_app <- function() {
     })
     
     # generate the default name for output xml and method template
-    output_file <- reactiveValues(file_name = NULL)
-    observe({
-      req(tree_values$tree)
-      req(input$traitcolumn_name)
-      req(!is.null(input$further_analysis))
-      req(lheats$num)
-      req(states_dat())
+    output_file <- shiny::reactiveValues(file_name = NULL)
+    shiny::observe({
+      shiny::req(tree_values$tree)
+      shiny::req(input$traitcolumn_name)
+      shiny::req(!is.null(input$further_analysis))
+      shiny::req(lheats$num)
+      shiny::req(states_dat())
       
       file_name <- input$xml_name
       
@@ -1675,42 +1669,42 @@ run_app <- function() {
     # tree model ui: only gives user the option to choose whether to do sequential Bayesian (i.e., sampling trees) correctly 
     # or not when the uploaded tree file contains multiple trees
     output$treemodel_ui <- renderUI({
-      req(tree_values$tree)
+      shiny::req(tree_values$tree)
       
       if (tree_values$tree_num > 1) {
         
-        selectInput(inputId = "empiricaltree_mh", label = "Averaging over imported trees using", 
-                    choices = c(input_default$empiricaltree_mh, "empirical sampling (not recommended)"),
-                    selected = input_default$empiricaltree_mh, multiple = F, selectize = F)
+        shiny::selectInput(inputId = "empiricaltree_mh", label = "Averaging over imported trees using", 
+                           choices = c(input_default$empiricaltree_mh, "empirical sampling (not recommended)"),
+                           selected = input_default$empiricaltree_mh, multiple = F, selectize = F)
       } else {
         p("A single tree is imported, so the phylogenetic random variable is fixed to be this tree.")
       }
     })
     
-    observe({
-      req(tree_values$tree)
-      req(input$empiricaltree_mh)
+    shiny::observe({
+      shiny::req(tree_values$tree)
+      shiny::req(input$empiricaltree_mh)
       
       if (input$empiricaltree_mh == "empirical sampling (not recommended)") {
-        showModal(modalDialog("Averaging over trees by always accepting the proposed tree during the MCMC (i.e., without computing the acceptance ratio) is not recommended. For more details, see Supplementary Material of Gao et al. 2021",
-                              title = "Warning: unrecommended option",
-                              easyClose = F,
-                              size = "m"
-                              
+        shiny::showModal(modalDialog("Averaging over trees by always accepting the proposed tree during the MCMC (i.e., without computing the acceptance ratio) is not recommended. For more details, see Supplementary Material of Gao et al. 2021",
+                                     title = "Warning: unrecommended option",
+                                     easyClose = F,
+                                     size = "m"
+                                     
         ))
       }
     })
     
     # compute the parsimony score (only use the first tree for now, just to be efficient)
-    parsimony_score <- reactiveValues(mean = 0)
-    observe({
-      req(input$traitcolumn_name)
-      req(input$taxoncolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
-      req(!input_condition$tree_invalid)
-      req(!input_condition$trait_invalid)
-      req(!input_condition$treetrait_invalid)
+    parsimony_score <- shiny::reactiveValues(mean = 0)
+    shiny::observe({
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(!input_condition$tree_invalid)
+      shiny::req(!input_condition$trait_invalid)
+      shiny::req(!input_condition$treetrait_invalid)
       
       observed_tipstates <- as.vector(states_dat()[, input$traitcolumn_name])
       states <- sort(unique(observed_tipstates))
@@ -1729,7 +1723,7 @@ run_app <- function() {
           filepath <- tree_paths_defaultupload[2]
         }
       } else {
-        req(input$tree_file)
+        shiny::req(input$tree_file)
         filepath <- input$tree_file$datapath
       }
       parsimony_score$mean <- parsimonyscore_treebytree(filepath = filepath, tree = tree, 
@@ -1737,7 +1731,7 @@ run_app <- function() {
     })
     
     # only generate the delta prior panel when user choose to do bssvs
-    observe({
+    shiny::observe({
       if (input$with_bssvs) {
         showTab(inputId = "prior_tabs", target = "delta", select = T)
       } else {
@@ -1747,16 +1741,16 @@ run_app <- function() {
     
     # render delta prior ui according to the selected prior
     output$deltaprior_ui <- renderUI({
-      req(states_dat())
-      req(tree_values$tree)
-      req(input$model_symmetry)
-      req(input$taxoncolumn_name)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
+      shiny::req(input$model_symmetry)
+      shiny::req(input$taxoncolumn_name)
       
       states <- sort(as.vector(unique(states_dat()[, input$traitcolumn_name])))
       states <- states[states != "?"]
       states_num <- length(states)
       
-      deltaprior_ui_list <- tagList()
+      deltaprior_ui_list <- shiny::tagList()
       
       if (input$delta_prior == "Poisson") {
         
@@ -1770,12 +1764,12 @@ run_app <- function() {
           poisson_mean <- 0.6931471805599453
         }
         
-        deltaprior_ui_list <- tagAppendChildren(deltaprior_ui_list, checkboxInput(inputId = "poisson_default", label = "BEAST default", value = F),
-                                                div(id = "poisson_alternative",
-                                                    numericInput(inputId = "poisson_lambda", label = HTML("&lambda; of the offset Poisson distribution"), value = poisson_mean, min = 0)
-                                                    # sliderInput(inputId = "poisson_offset", label = "offset of Poisson", min = 0, 
-                                                    #             max = ifelse(input$model_symmetry, choose(states_num, 2), choose(states_num, 2) * 2), 
-                                                    #             value = ifelse(input$model_symmetry, states_num - 1, 0))
+        deltaprior_ui_list <- tagAppendChildren(deltaprior_ui_list, shiny::checkboxInput(inputId = "poisson_default", label = "BEAST default", value = F),
+                                                shiny::div(id = "poisson_alternative",
+                                                           numericInput(inputId = "poisson_lambda", label = HTML("&lambda; of the offset Poisson distribution"), value = poisson_mean, min = 0)
+                                                           # sliderInput(inputId = "poisson_offset", label = "offset of Poisson", min = 0, 
+                                                           #             max = ifelse(input$model_symmetry, choose(states_num, 2), choose(states_num, 2) * 2), 
+                                                           #             value = ifelse(input$model_symmetry, states_num - 1, 0))
                                                 ))
       } else if (input$delta_prior == "Beta-Binomial") {
         deltaprior_ui_list <- tagAppendChildren(deltaprior_ui_list, numericInput(inputId = "alpha_beta", label = "alpha of Beta", value = 1),
@@ -1786,12 +1780,12 @@ run_app <- function() {
     })
     
     # update the default poisson lambda
-    observe({
-      req(tree_values$tree)
-      req(input$delta_prior)
-      req(states_dat())
-      req(input$traitcolumn_name)
-      req(input$model_symmetry)
+    shiny::observe({
+      shiny::req(tree_values$tree)
+      shiny::req(input$delta_prior)
+      shiny::req(states_dat())
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$model_symmetry)
       
       if (input$delta_prior == "Poisson" && (!is.null(input$poisson_default))) {
         shinyjs::toggleClass(id = "poisson_alternative", class = "divdisabled", condition = input$poisson_default)
@@ -1827,9 +1821,9 @@ run_app <- function() {
     })
     
     # sanity check for the input poisson lambda value
-    observe({
-      req(tree_values$tree)
-      req(input$poisson_lambda)
+    shiny::observe({
+      shiny::req(tree_values$tree)
+      shiny::req(input$poisson_lambda)
       
       states <- sort(as.vector(unique(states_dat()[, input$traitcolumn_name])))
       states <- states[states != "?"]
@@ -1837,11 +1831,11 @@ run_app <- function() {
       delta_max <- ((input$model_symmetry == "asymmetric") + 1) * choose(states_num, 2)
       
       if (input$poisson_lambda > delta_max || input$poisson_lambda <= 0) {
-        showModal(modalDialog("Lambda of the Poisson prior needs to be within the possible range.",
-                              title = "Invalid input",
-                              easyClose = T,
-                              size = "s"
-                              
+        shiny::showModal(modalDialog("Lambda of the Poisson prior needs to be within the possible range.",
+                                     title = "Invalid input",
+                                     easyClose = T,
+                                     size = "s"
+                                     
         ))
       }
       
@@ -1849,11 +1843,11 @@ run_app <- function() {
     
     # render mu prior ui according to the selected prior
     output$muprior_ui <- renderUI({
-      req(tree_values$tree)
-      req(states_dat())
-      req(parsimony_score$mean != 0)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(parsimony_score$mean != 0)
       
-      muprior_ui_list <- tagList()
+      muprior_ui_list <- shiny::tagList()
       asterisk_num <- 1
       
       if (input$mu_prior == "Hierarchical Exponential") {
@@ -1886,42 +1880,42 @@ run_app <- function() {
     })
     
     # don't show the option for computing the average parsimony score across all trees for now
-    observe({
-      req(tree_values$tree)
+    shiny::observe({
+      shiny::req(tree_values$tree)
       shinyjs::toggle(id = "parsimonyscore_alltree", condition = F)
     })
     
     # sanity check for the mu prior associated input values
-    observe({
-      req(input$mu_prior)
-      req(tree_values$tree)
-      req(states_dat())
-      req(parsimony_score$mean != 0)
+    shiny::observe({
+      shiny::req(input$mu_prior)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(parsimony_score$mean != 0)
       
       if (input$mu_prior == "Hierarchical Exponential" && (!is.null(input$alphaofgamma_mumean)) && (input$alphaofgamma_mumean <= 0)) {
         
-        req(input$alphaofgamma_mumean) 
+        shiny::req(input$alphaofgamma_mumean) 
         
         if (input$alphaofgamma_mumean <= 0) {
-          showModal(modalDialog("Shape and rate parameter of the Gamma distribution have to be positive.",
-                                title = "Invalid input",
-                                easyClose = F,
-                                size = "m"
-                                
+          shiny::showModal(modalDialog("Shape and rate parameter of the Gamma distribution have to be positive.",
+                                       title = "Invalid input",
+                                       easyClose = F,
+                                       size = "m"
+                                       
           ))
         }
       }
       
       if (input$mu_prior == "Empirical-Informed Exponential") {
         
-        req(input$dispersaleventnum_NBmean)
+        shiny::req(input$dispersaleventnum_NBmean)
         
         if (input$dispersaleventnum_NBmean <= 0) {
-          showModal(modalDialog("Expected number of dispersal events has to be strictly positive.",
-                                title = "Invalid input",
-                                easyClose = F,
-                                size = "m"
-                                
+          shiny::showModal(modalDialog("Expected number of dispersal events has to be strictly positive.",
+                                       title = "Invalid input",
+                                       easyClose = F,
+                                       size = "m"
+                                       
           ))
         }
       }
@@ -1929,10 +1923,10 @@ run_app <- function() {
     
     # render the proposal ui according to the model specification
     output$proposalweight_ui <- renderUI({
-      req(tree_values$tree)
-      req(states_dat())
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
       
-      proposalweight_ui_list <- tagList()
+      proposalweight_ui_list <- shiny::tagList()
       proposalweight_ui_list <- tagAppendChild(proposalweight_ui_list, numericInput(inputId = "proposalweight_r", label = "Weight of proposal on pairwise dispersal rates, r", 
                                                                                     value = input_default$proposalweight_r, min = 0))
       
@@ -1967,45 +1961,45 @@ run_app <- function() {
     })
     
     # warning message for BEAST default priors
-    observe({
-      req(tree_values$tree)
-      req(states_dat())
-      req(input$delta_prior)
+    shiny::observe({
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(input$delta_prior)
       
       if (input$delta_prior == "Poisson" && (!is.null(input$poisson_default)) && (input$poisson_default)) {
-        showModal(modalDialog(paste0("Note that this prior is not recommended since it expresses an explicit and very informative preference for biogeographic models with the minimal number of dispersal routes. ",
-                                     "For more details, see Gao et al. 2021."),
-                              title = "Warning: unrecommended option",
-                              easyClose = F,
-                              size = "l"
-                              
+        shiny::showModal(modalDialog(paste0("Note that this prior is not recommended since it expresses an explicit and very informative preference for biogeographic models with the minimal number of dispersal routes. ",
+                                            "For more details, see Gao et al. 2021."),
+                                     title = "Warning: unrecommended option",
+                                     easyClose = F,
+                                     size = "l"
+                                     
         ))
       }
     })
     
-    observe({
-      req(tree_values$tree)
-      req(states_dat())
-      req(input$mu_prior)
+    shiny::observe({
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(input$mu_prior)
       
       if (input$mu_prior == "CTMC rate-ref (BEAST default)") {
-        showModal(modalDialog(paste0("Note that this prior assumes the expected number of dispersal events across the entire tree is only 0.5 and the 95% prior interval is (0, 3), ",
-                                     "regardless of the number of tips, the number of geographic areas, or the duration of the biogeographic history; ",
-                                     "it is very informative (i.e., it may have strong impact on the posterior estimates) and unlikely to be biologically realistic, ",
-                                     "so it's not recommended. For more details, see Gao et al. 2021"),
-                              title = "Warning: unrecommended option",
-                              easyClose = F,
-                              size = "l"
+        shiny::showModal(modalDialog(paste0("Note that this prior assumes the expected number of dispersal events across the entire tree is only 0.5 and the 95% prior interval is (0, 3), ",
+                                            "regardless of the number of tips, the number of geographic areas, or the duration of the biogeographic history; ",
+                                            "it is very informative (i.e., it may have strong impact on the posterior estimates) and unlikely to be biologically realistic, ",
+                                            "so it's not recommended. For more details, see Gao et al. 2021"),
+                                     title = "Warning: unrecommended option",
+                                     easyClose = F,
+                                     size = "l"
         ))
       }
     })
     
     # discrete trait data xml chunk
     discretetraitdata_xml <- reactive({
-      req(states_dat())
-      req(input$taxoncolumn_name)
-      req(input$traitcolumn_name)
-      req(lheats$num)
+      shiny::req(states_dat())
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(input$traitcolumn_name)
+      shiny::req(lheats$num)
       
       lheat <- 1
       if ((!is.null(input$further_analysis)) && (input$further_analysis == "Data cloning") && (!is.null(input$lheats1))) {
@@ -2021,11 +2015,11 @@ run_app <- function() {
     })
     
     # store the current and previous version for comparison (so that we can highlight the changed part)
-    discretetraitdataxml <- reactiveValues(last = NULL, current = NULL)
-    observe({
+    discretetraitdataxml <- shiny::reactiveValues(last = NULL, current = NULL)
+    shiny::observe({
       
-      req(states_dat())
-      req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       
       isolate(discretetraitdataxml$last <- discretetraitdataxml$current)
       discretetraitdataxml$current <- discretetraitdata_xml()[1]
@@ -2036,7 +2030,7 @@ run_app <- function() {
     
     # discrete trait model xml chunk
     discretetraitmodel_xml <- reactive({
-      req(states_dat())
+      shiny::req(states_dat())
       
       rates_proposal_weight <- 0
       if (!is.null(input$proposalweight_r)) rates_proposal_weight <- input$proposalweight_r
@@ -2074,9 +2068,9 @@ run_app <- function() {
     
     # mu model xml chunk
     clockratemodel_xml <- reactive({
-      req(states_dat())
-      req(tree_values$tree)
-      req(input$mu_prior)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
+      shiny::req(input$mu_prior)
       
       clockratemean_proposal_weight <- 0
       clockrate_mean_gammashaperate <- 0.5
@@ -2087,7 +2081,7 @@ run_app <- function() {
       
       clockrate_mean <- 1
       if (input$mu_prior == "Empirical-Informed Exponential" && (!is.null(input$dispersaleventnum_NBmean))) {
-        clockrate_mean <- input$dispersaleventnum_NBmean/tree_values$tree_length
+        clockrate_mean <- input$dispersaleventnum_NBmean / tree_values$tree_length
       }
       
       xml_clockratemodel(discrete_trait_name = input$traitcolumn_name, ctmc = (input$mu_prior == "CTMC rate-ref (BEAST default)"), 
@@ -2098,10 +2092,10 @@ run_app <- function() {
     # tree model xml chunk
     treemodel_xml <- reactive({
       
-      req(tree_values$tree)
+      shiny::req(tree_values$tree)
       if (tree_values$tree_num > 1) {
-        req(input$proposalweight_tree)
-        req(input$empiricaltree_mh)
+        shiny::req(input$proposalweight_tree)
+        shiny::req(input$empiricaltree_mh)
       }
       
       tree_proposal_weight <- 0
@@ -2114,7 +2108,7 @@ run_app <- function() {
       if (input$tree_file_defaultupload) {
         tree_name <- basename(tree_paths_defaultupload[1])
       } else {
-        req(input$tree_file)
+        shiny::req(input$tree_file)
         tree_name <- input$tree_file$name
       }
       xml_treemodel(tree = tree_values$tree, treefile_name = tree_name,
@@ -2123,8 +2117,8 @@ run_app <- function() {
     
     # put the model xml chunks together
     model_xml <- reactive({
-      req(states_dat())
-      req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       
       paste(treemodel_xml()$tree_model, clockratemodel_xml()$discretetrait_clock_rate, discretetraitmodel_xml()$substitution_model, sep = "\n")
     })
@@ -2141,8 +2135,8 @@ run_app <- function() {
     })
     
     modelprior_xml_d <- debounce(modelprior_xml, millis = 1000)
-    modelpriorxml <- reactiveValues(last = NULL, current = NULL)
-    observeEvent(modelprior_xml_d(), {
+    modelpriorxml <- shiny::reactiveValues(last = NULL, current = NULL)
+    shiny::observeEvent(modelprior_xml_d(), {
       
       modelpriorxml$last <- modelpriorxml$current
       modelpriorxml$current <- modelprior_xml_d()
@@ -2150,8 +2144,8 @@ run_app <- function() {
     
     # put the proposal xml chunks together
     moves_xml <- reactive({
-      req(states_dat())
-      req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       
       paste0("\t<operators id=\"operators\" optimizationSchedule=\"log\">\n", 
              treemodel_xml()$tree_proposal, clockratemodel_xml()$clock_rate_proposal, discretetraitmodel_xml()$substmodel_proposals, 
@@ -2159,8 +2153,8 @@ run_app <- function() {
     })
     
     moves_xml_d <- debounce(moves_xml, millis = 1000)
-    movesxml <- reactiveValues(last = NULL, current = NULL)
-    observeEvent(moves_xml_d(), {
+    movesxml <- shiny::reactiveValues(last = NULL, current = NULL)
+    shiny::observeEvent(moves_xml_d(), {
       
       movesxml$last <- movesxml$current
       movesxml$current <- moves_xml_d()
@@ -2168,9 +2162,9 @@ run_app <- function() {
     
     # phyloctmc chunk (phylogenetic likelihood and stochastic mapping)
     phyloctmc_xml <- reactive({
-      req(states_dat())
-      req(tree_values$tree)
-      req(input$traitcolumn_name)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
+      shiny::req(input$traitcolumn_name)
       
       lheat <- 1
       if ((!is.null(input$further_analysis)) && (input$further_analysis == "Data cloning") && (!is.null(input$lheats1))) lheat <- input$lheats1
@@ -2187,11 +2181,11 @@ run_app <- function() {
                     do_totalcount = do_totalcount, do_pairwisecount = do_pairwisecount)
     })
     
-    phyloctmcxml <- reactiveValues(last = NULL, current = NULL)
-    observe({
+    phyloctmcxml <- shiny::reactiveValues(last = NULL, current = NULL)
+    shiny::observe({
       
-      req(states_dat())
-      req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       
       isolate(phyloctmcxml$last <- phyloctmcxml$current)
       phyloctmcxml$current <- phyloctmc_xml()
@@ -2202,9 +2196,9 @@ run_app <- function() {
     
     # posterior xml chunk
     posterior_xml <- reactive({
-      req(states_dat())
-      req(tree_values$tree)
-      req(input$traitcolumn_name)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
+      shiny::req(input$traitcolumn_name)
       
       prior <- "\t\t<prior idref=\"prior\">\n"
       likelihood <- paste0("\t\t\t<likelihood id=\"likelihood\">\n", 
@@ -2215,8 +2209,8 @@ run_app <- function() {
     
     # note that this will be a list of xml chunks as there could be multiple replicates or data cloning analyses
     monitors_xml <- reactive({
-      req(states_dat())
-      req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       
       ml_numstones <- ml_chainlengthperstone <- ml_samplingfreq <- ml_alphaofbeta <- 0
       if ((!is.null(input$further_analysis)) && ("Marginal likehood estimation" %in% input$further_analysis)) {
@@ -2243,11 +2237,11 @@ run_app <- function() {
       
     })
     
-    powerposteriorxml <- reactiveValues(last = NULL, current = NULL)
-    observe({
+    powerposteriorxml <- shiny::reactiveValues(last = NULL, current = NULL)
+    shiny::observe({
       
-      req(states_dat())
-      req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       
       isolate(powerposteriorxml$last <- powerposteriorxml$current)
       powerposteriorxml$current <- monitors_xml()[[1]]$log_powerposterior
@@ -2266,11 +2260,11 @@ run_app <- function() {
                x$log_jointposterior, "\t</mcmc>\n"))
     })
     
-    mcmcxml <- reactiveValues(last = NULL, current = NULL)
-    observe({
+    mcmcxml <- shiny::reactiveValues(last = NULL, current = NULL)
+    shiny::observe({
       
-      req(states_dat())
-      req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       
       isolate(mcmcxml$last <- mcmcxml$current)
       mcmcxml$current <- mcmc_xml()[1]
@@ -2298,11 +2292,11 @@ run_app <- function() {
       return(fullxml_reps)
     })
     
-    fullxml <- reactiveValues(last = NULL, current = NULL)
-    observe({
+    fullxml <- shiny::reactiveValues(last = NULL, current = NULL)
+    shiny::observe({
       
-      req(states_dat())
-      req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       
       isolate(fullxml$last <- fullxml$current)
       fullxml$current <- full_xml()[1]
@@ -2315,98 +2309,98 @@ run_app <- function() {
     # render data xml ui
     output$beastxml_data <- renderUI({
       
-      req(states_dat())
-      req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       
       dataline_str <- getDifferedLines(last_txt = discretetraitdataxml$last, current_txt = discretetraitdataxml$current, file_ext = "_data.txt")
       
-      tagList(
+      shiny::tagList(
         HTML(paste0("<pre class='line-numbers'", dataline_str, "><code id='xml_data' class='language-markup'>", gsub("<", "&lt;", discretetraitdata_xml()[1]), "</code></pre>")),
-        tags$script("Prism.highlightElement($('#xml_data')[0], true);")
+        shiny::tags$script("Prism.highlightElement($('#xml_data')[0], true);")
       )
     })
     
     # render model and prior xml ui
     output$beastxml_modelprior <- renderUI({
       
-      req(states_dat())
-      req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       
       dataline_str <- getDifferedLines(last_txt = modelpriorxml$last, current_txt = modelpriorxml$current, file_ext = "_modelprior.txt")
       
-      tagList(
+      shiny::tagList(
         HTML(paste0("<pre class='line-numbers'", dataline_str, "><code id='xml_modelprior' class='language-markup'>", gsub("<", "&lt;", modelprior_xml()), "</code></pre>")),
-        tags$script("Prism.highlightElement($('#xml_modelprior')[0], true);")
+        shiny::tags$script("Prism.highlightElement($('#xml_modelprior')[0], true);")
       )
     })
     
     # render proposal/operators xml ui
     output$beastxml_proposal <- renderUI({
       
-      req(states_dat())
-      req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       
       dataline_str <- getDifferedLines(last_txt = movesxml$last, current_txt = movesxml$current, file_ext = "_moves.txt")
       
-      tagList(
+      shiny::tagList(
         HTML(paste0("<pre class='line-numbers'", dataline_str, "><code id='xml_proposal' class='language-markup'>", gsub("<", "&lt;", moves_xml()), "</code></pre>")),
-        tags$script("Prism.highlightElement($('#xml_proposal')[0], true);")
+        shiny::tags$script("Prism.highlightElement($('#xml_proposal')[0], true);")
       )
     })
     
     # render mcmc xml ui
     output$beastxml_mcmc <- renderUI({
       
-      req(states_dat())
-      req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       
       dataline_str <- getDifferedLines(last_txt = mcmcxml$last, current_txt = mcmcxml$current, file_ext = "_mcmc.txt")
       
-      tagList(
+      shiny::tagList(
         HTML(paste0("<pre class='line-numbers'", dataline_str, "><code id='xml_mcmc' class='language-markup'>", gsub("<", "&lt;", mcmc_xml()[1]), "</code></pre>")),
-        tags$script("Prism.highlightElement($('#xml_mcmc')[0], true);")
+        shiny::tags$script("Prism.highlightElement($('#xml_mcmc')[0], true);")
       )
     })
     
     # render phyloctmc/treelikelihood xml ui
     output$beastxml_phyloctmc <- renderUI({
       
-      req(states_dat())
-      req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       
       dataline_str <- getDifferedLines(last_txt = phyloctmcxml$last, current_txt = phyloctmcxml$current, file_ext = "_phyloctmc.txt")
       
-      tagList(
+      shiny::tagList(
         HTML(paste0("<pre class='line-numbers'", dataline_str, "><code id='xml_phyloctmc' class='language-markup'>", gsub("<", "&lt;", phyloctmc_xml()), "</code></pre>")),
-        tags$script("Prism.highlightElement($('#xml_phyloctmc')[0], true);")
+        shiny::tags$script("Prism.highlightElement($('#xml_phyloctmc')[0], true);")
       )
     })
     
     # render power posterior/marginal likelihood xml ui
     output$beastxml_powerposterior <- renderUI({
       
-      req(states_dat())
-      req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       
       dataline_str <- getDifferedLines(last_txt = powerposteriorxml$last, current_txt = powerposteriorxml$current, file_ext = "_powerposterior.txt")
       
-      tagList(
+      shiny::tagList(
         HTML(paste0("<pre class='line-numbers'", dataline_str, "><code id='xml_powerposterior' class='language-markup'>", gsub("<", "&lt;", monitors_xml()[[1]]$log_powerposterior), "</code></pre>")),
-        tags$script("Prism.highlightElement($('#xml_powerposterior')[0], true);")
+        shiny::tags$script("Prism.highlightElement($('#xml_powerposterior')[0], true);")
       )
     })
     
     # render full xml ui
     output$beastxml_full <- renderUI({
       
-      req(states_dat())
-      req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
       
       dataline_str <- getDifferedLines(last_txt = fullxml$last, current_txt = fullxml$current, file_ext = "_full.txt")
       
-      tagList(
+      shiny::tagList(
         HTML(paste0("<pre class='line-numbers'", dataline_str, "><code id='xml_full' class='language-markup'>", gsub("<", "&lt;", full_xml()[1]), "</code></pre>")),
-        tags$script("Prism.highlightElement($('#xml_full')[0], true);")
+        shiny::tags$script("Prism.highlightElement($('#xml_full')[0], true);")
       )
     })
     
@@ -2480,13 +2474,13 @@ run_app <- function() {
     
     
     # methods text: data
-    data_text <- reactiveValues(html = "", tex = "", md = "")
-    observe({
+    data_text <- shiny::reactiveValues(html = "", tex = "", md = "")
+    shiny::observe({
       
-      req(input$traitcolumn_name)
-      req(input$taxoncolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
       
       states <- sort(as.vector(unique(states_dat()[, input$traitcolumn_name])))
       states <- states[states != "?"]
@@ -2500,23 +2494,23 @@ run_app <- function() {
     
     output$methods_data <- renderUI({
       
-      req(input$traitcolumn_name)
-      req(input$taxoncolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
       
       withMathJax(HTML(paste0("<div style = 'font-size: 90%;'>", data_text$html, "</div>")))
     })
     
     # methods text: model
-    model_text <- reactiveValues(html = "", tex = "", md = "", htmlviewer = "", tmppath = NULL)
-    observe({
+    model_text <- shiny::reactiveValues(html = "", tex = "", md = "", htmlviewer = "", tmppath = NULL)
+    shiny::observe({
       
-      req(input$traitcolumn_name)
-      req(input$taxoncolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
-      req(input$model_symmetry)
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(input$model_symmetry)
       
       model_text$html <- tex_model(bssvs = input$with_bssvs, symmetry = (input$model_symmetry == "symmetric"), format = "HTML")
       model_text$tex <- tex_model(bssvs = input$with_bssvs, symmetry = (input$model_symmetry == "symmetric"), format = "Latex")
@@ -2526,25 +2520,25 @@ run_app <- function() {
     
     output$methods_model <- renderUI({
       
-      req(input$traitcolumn_name)
-      req(input$taxoncolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
       
       withMathJax(HTML(paste0("<div style = 'font-size: 90%;'>", model_text$htmlviewer, "</div>")))
       
     })
     
     # methods text: prior
-    prior_text <- reactiveValues(html = "", tex = "", md = "", htmlviewer = "", tmppath = NULL)
-    observe({
+    prior_text <- shiny::reactiveValues(html = "", tex = "", md = "", htmlviewer = "", tmppath = NULL)
+    shiny::observe({
       
-      req(input$traitcolumn_name)
-      req(input$taxoncolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
-      req(input$model_symmetry)
-      req(input$mu_prior)
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(input$model_symmetry)
+      shiny::req(input$mu_prior)
       
       states <- sort(as.vector(unique(states_dat()[, input$traitcolumn_name])))
       states <- states[states != "?"]
@@ -2608,16 +2602,16 @@ run_app <- function() {
       }
       
       muprior_text <- list(html = "", tex = "", md = "", htmlviewer = "")
-      muprior_text$html <- tex_muprior(mu_prior = input$mu_prior, tree_length = tree_values$tree_length, 
+      muprior_text$html <- tex_muprior(mu_prior = input$mu_prior, tree_length = tree_values$tree_length, tree_num = tree_values$tree_num,
                                        hierachexp_alphaofgamma = hierachexp_alphaofgamma, hierachexp_dispersaleventsnummean = hierachexp_dispersaleventsnummean, 
                                        empinformed_dispersaleventsnummean = empinformed_dispersaleventsnummean, parsimony_score = parsimonyscore, format = "HTML")
-      muprior_text$tex <- tex_muprior(mu_prior = input$mu_prior, tree_length = tree_values$tree_length, 
+      muprior_text$tex <- tex_muprior(mu_prior = input$mu_prior, tree_length = tree_values$tree_length, tree_num = tree_values$tree_num,
                                       hierachexp_alphaofgamma = hierachexp_alphaofgamma, hierachexp_dispersaleventsnummean = hierachexp_dispersaleventsnummean, 
                                       empinformed_dispersaleventsnummean = empinformed_dispersaleventsnummean, parsimony_score = parsimonyscore, format = "Latex")
-      muprior_text$md <- tex_muprior(mu_prior = input$mu_prior, tree_length = tree_values$tree_length,
+      muprior_text$md <- tex_muprior(mu_prior = input$mu_prior, tree_length = tree_values$tree_length, tree_num = tree_values$tree_num,
                                      hierachexp_alphaofgamma = hierachexp_alphaofgamma, hierachexp_dispersaleventsnummean = hierachexp_dispersaleventsnummean, 
                                      empinformed_dispersaleventsnummean = empinformed_dispersaleventsnummean, parsimony_score = parsimonyscore, format = "Markdown")
-      muprior_text$htmlviewer <- tex_muprior(mu_prior = input$mu_prior, tree_length = tree_values$tree_length, 
+      muprior_text$htmlviewer <- tex_muprior(mu_prior = input$mu_prior, tree_length = tree_values$tree_length, tree_num = tree_values$tree_num,
                                              hierachexp_alphaofgamma = hierachexp_alphaofgamma, hierachexp_dispersaleventsnummean = hierachexp_dispersaleventsnummean, 
                                              empinformed_dispersaleventsnummean = empinformed_dispersaleventsnummean, parsimony_score = parsimonyscore, format = "HTML", render_citation = F)
       
@@ -2628,14 +2622,14 @@ run_app <- function() {
     })
     
     # methods text: bayesian inference
-    bayesianinference_text <- reactiveValues(html = "", tex = "", md = "", htmlviewer = "")
-    observe({
+    bayesianinference_text <- shiny::reactiveValues(html = "", tex = "", md = "", htmlviewer = "")
+    shiny::observe({
       
-      req(input$traitcolumn_name)
-      req(input$taxoncolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
-      req(input$empiricaltree_mh)
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(input$empiricaltree_mh)
       
       empiricaltree_mh <- F
       if (tree_values$tree_num > 1) {
@@ -2655,24 +2649,24 @@ run_app <- function() {
     # prior and bayesian inference
     output$methods_prior <- renderUI({
       
-      req(input$traitcolumn_name)
-      req(input$taxoncolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
       
       withMathJax(HTML(paste0("<div style = 'font-size: 90%;'>", prior_text$htmlviewer, "<br>", bayesianinference_text$htmlviewer, "</div>")))
       
     })
     
     # methods text: analysis
-    posterioranalysis_text <- reactiveValues(html = "", tex = "", md = "")
-    observe({
+    posterioranalysis_text <- shiny::reactiveValues(html = "", tex = "", md = "")
+    shiny::observe({
       
-      req(input$traitcolumn_name)
-      req(input$taxoncolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
-      req(input$mcmc_numreplicates)
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(input$mcmc_numreplicates)
       
       posterioranalysis_text$html <- tex_posterioranalysis(mcmc_chainlength = as.integer(input$mcmc_chainlength),
                                                            mcmc_samplingfreq = as.integer(input$mcmc_samplingfreq), 
@@ -2685,13 +2679,13 @@ run_app <- function() {
                                                          mcmc_numreplicates = as.integer(input$mcmc_numreplicates), format = "Markdown")
     })
     
-    summarystats_text <- reactiveValues(html = "", tex = "", md = "", htmlviewer = "")
-    observe({
+    summarystats_text <- shiny::reactiveValues(html = "", tex = "", md = "", htmlviewer = "")
+    shiny::observe({
       
-      req(input$traitcolumn_name)
-      req(input$taxoncolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
       
       do_totalcount <- do_pairwisecount <- F
       if ((!is.null(input$do_stochasticmapping)) && input$do_stochasticmapping != "") {
@@ -2709,14 +2703,14 @@ run_app <- function() {
       }
     })
     
-    powerposterior_text <- reactiveValues(html = "", tex = "", md = "", htmlviewer = "")
-    observe({
+    powerposterior_text <- shiny::reactiveValues(html = "", tex = "", md = "", htmlviewer = "")
+    shiny::observe({
       
-      req(input$traitcolumn_name)
-      req(input$taxoncolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
-      req(input$mcmc_numreplicates)
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(input$mcmc_numreplicates)
       
       ml_numstones <- ml_chainlengthperstone <- ml_samplingfreq <- ml_alphaofbeta <- 0
       if ((!is.null(input$further_analysis)) && ("Marginal likehood estimation" %in% input$further_analysis)) {
@@ -2740,14 +2734,14 @@ run_app <- function() {
       }
     })
     
-    prioranalysis_text <- reactiveValues(html = "", tex = "", md = "")
-    observe({
+    prioranalysis_text <- shiny::reactiveValues(html = "", tex = "", md = "")
+    shiny::observe({
       
-      req(input$traitcolumn_name)
-      req(input$taxoncolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
-      req(input$mcmc_numreplicates)
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(input$mcmc_numreplicates)
       
       prioranalysis_text$html <- tex_prioranalysis(mcmc_chainlength = as.integer(input$mcmc_chainlength), 
                                                    mcmc_samplingfreq = as.integer(input$mcmc_samplingfreq), 
@@ -2760,14 +2754,14 @@ run_app <- function() {
                                                  mcmc_numreplicates = as.integer(input$mcmc_numreplicates), format = "Markdown")
     })
     
-    dcanalysis_text <- reactiveValues(html = "", tex = "", md = "", htmlviewer = "")
-    observe({
+    dcanalysis_text <- shiny::reactiveValues(html = "", tex = "", md = "", htmlviewer = "")
+    shiny::observe({
       
-      req(input$traitcolumn_name)
-      req(input$taxoncolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
-      req(input$mcmc_numreplicates)
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
+      shiny::req(input$mcmc_numreplicates)
       
       lheat <- 1
       if ((!is.null(input$further_analysis)) && (input$further_analysis == "Data cloning") && (!is.null(input$lheats1))) {
@@ -2788,13 +2782,13 @@ run_app <- function() {
       }
     })
     
-    analysis_text <- reactiveValues(html = "", tex = "", md = "", htmlviewer = "", tmppath = NULL)
-    observe({
+    analysis_text <- shiny::reactiveValues(html = "", tex = "", md = "", htmlviewer = "", tmppath = NULL)
+    shiny::observe({
       
-      req(input$traitcolumn_name)
-      req(input$taxoncolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
       
       analysis_text$html <- tex_analysis(further_analysis = input$further_analysis, posterioranalysis_text = posterioranalysis_text$html, 
                                          summarystats_text = summarystats_text$html, powerposterior_text = powerposterior_text$html, 
@@ -2813,17 +2807,17 @@ run_app <- function() {
     # render analysis ui
     output$methods_analysis <- renderUI({
       
-      req(input$traitcolumn_name)
-      req(input$taxoncolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
       
       withMathJax(HTML(paste0("<div style = 'font-size: 90%;'>", analysis_text$htmlviewer, "</div>")))
     })
     
     # methods text: full
-    full_text <- reactiveValues(html = "", tex = "", md = "", htmlviewer = "", tmppath = NULL)
-    observe({
+    full_text <- shiny::reactiveValues(html = "", tex = "", md = "", htmlviewer = "", tmppath = NULL)
+    shiny::observe({
       full_text$html <- paste(data_text$html, model_text$html, prior_text$html, bayesianinference_text$html, analysis_text$html, sep = "<br>")
       full_text$tex <- paste(data_text$tex, model_text$tex, prior_text$tex, bayesianinference_text$tex, analysis_text$tex, sep = "\n")
       full_text$md <- paste(data_text$md, model_text$md, prior_text$md, bayesianinference_text$md, analysis_text$md, sep = "\n")
@@ -2832,10 +2826,10 @@ run_app <- function() {
     
     output$methods_full <- renderUI({
       
-      req(input$traitcolumn_name)
-      req(input$taxoncolumn_name)
-      req(tree_values$tree)
-      req(states_dat())
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(states_dat())
       
       withMathJax(HTML(paste0("<div style = 'font-size: 90%;'>", full_text$htmlviewer, "</div>")))
     })
@@ -2944,14 +2938,14 @@ run_app <- function() {
     # render the prior description ui
     output$priordescription_ui <- renderUI({
       
-      req(input$traitcolumn_name)
-      req(tree_values$tree)
-      req(input$prior_tabs)
-      req(input$delta_prior)
-      req(input$mu_prior)
-      req(input$model_symmetry)
-      req(states_dat())
-      req(parsimony_score$mean != 0)
+      shiny::req(input$traitcolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(input$prior_tabs)
+      shiny::req(input$delta_prior)
+      shiny::req(input$mu_prior)
+      shiny::req(input$model_symmetry)
+      shiny::req(states_dat())
+      shiny::req(parsimony_score$mean != 0)
       
       deltaprior_description <- ""
       muprior_description <- ""
@@ -3022,9 +3016,9 @@ run_app <- function() {
         parsimonyscore_quantile <- pnbinom(parsimony_score$mean, size = 1, mu = input$dispersaleventnum_NBmean)
       }
       
-      muprior_description <- description_muprior(mu_prior = input$mu_prior, tree_length = tree_values$tree_length, hierachexp_mu95interval = hierarchexp$mu_x95interval, 
-                                                 hierachexp_alphaofgamma = hierachexp_alphaofgamma, hierachexp_dispersaleventsnummean = hierachexp_dispersaleventsnummean, 
-                                                 hierachexp_dispersaleventsnum95interval = hierachexp_dispersaleventsnum95interval, 
+      muprior_description <- description_muprior(mu_prior = input$mu_prior, tree_length = tree_values$tree_length, tree_num = tree_values$tree_num, 
+                                                 hierachexp_mu95interval = hierarchexp$mu_x95interval, hierachexp_alphaofgamma = hierachexp_alphaofgamma, 
+                                                 hierachexp_dispersaleventsnummean = hierachexp_dispersaleventsnummean, hierachexp_dispersaleventsnum95interval = hierachexp_dispersaleventsnum95interval, 
                                                  empinformed_dispersaleventsnummean = empinformed_dispersaleventsnummean, parsimonyscore_quantile = parsimonyscore_quantile)
       
       if ((input$prior_tabs == "delta") && input$with_bssvs) {
@@ -3037,13 +3031,13 @@ run_app <- function() {
     # render the prior notation ui
     output$priornotation_ui <- renderUI({
       
-      req(states_dat())
-      req(input$traitcolumn_name)
-      req(tree_values$tree)
-      req(input$prior_tabs)
-      req(input$delta_prior)
-      req(input$mu_prior)
-      req(input$model_symmetry)
+      shiny::req(states_dat())
+      shiny::req(input$traitcolumn_name)
+      shiny::req(tree_values$tree)
+      shiny::req(input$prior_tabs)
+      shiny::req(input$delta_prior)
+      shiny::req(input$mu_prior)
+      shiny::req(input$model_symmetry)
       
       math_tex <- NULL
       
@@ -3109,7 +3103,7 @@ run_app <- function() {
         
         clockrate_mean <- 1
         if (!is.null(input$dispersaleventnum_NBmean)) {
-          clockrate_mean <- input$dispersaleventnum_NBmean/tree_values$tree_length
+          clockrate_mean <- input$dispersaleventnum_NBmean / tree_values$tree_length
         }
         math_tex <- c(math_tex, paste0("$$\\mu \\sim Exp(", formatC(clockrate_mean, digits = 3, format = "fg"), ")$$"))
       }
@@ -3120,9 +3114,9 @@ run_app <- function() {
     # render the prior plot ui
     output$priorplot_ui <- renderUI({
       
-      req(states_dat())
-      req(tree_values$tree)
-      req(input$prior_tabs)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
+      shiny::req(input$prior_tabs)
       
       plot_height <- 300
       if (input$prior_tabs == "delta") {
@@ -3135,10 +3129,10 @@ run_app <- function() {
     })
     
     # store some computational expensive hierachical exponential prior plotting settings
-    hierarchexp <- reactiveValues()
-    observe({
-      req(input$alphaofgamma_mumean)
-      req(parsimony_score$mean != 0)
+    hierarchexp <- shiny::reactiveValues()
+    shiny::observe({
+      shiny::req(input$alphaofgamma_mumean)
+      shiny::req(parsimony_score$mean != 0)
       
       clockrate_mean_gammashaperate <- input$alphaofgamma_mumean
       
@@ -3177,12 +3171,12 @@ run_app <- function() {
     # plot the prior distribution (and the induced priors)
     output$prior_plot <- renderPlot({
       
-      req(states_dat())
-      req(tree_values$tree)
-      req(input$taxoncolumn_name)
-      req(input$traitcolumn_name)
-      req(input$prior_tabs)
-      req(input$model_symmetry)
+      shiny::req(states_dat())
+      shiny::req(tree_values$tree)
+      shiny::req(input$taxoncolumn_name)
+      shiny::req(input$traitcolumn_name)
+      shiny::req(input$prior_tabs)
+      shiny::req(input$model_symmetry)
       
       cols <- scales::seq_gradient_pal(low = "blue", high = "orange")(c(0, 1))
       
@@ -3286,7 +3280,7 @@ run_app <- function() {
           
         } else if (input$mu_prior == "Hierarchical Exponential") {
           
-          req(hierarchexp$dispersaleventsnum_yseq)
+          shiny::req(hierarchexp$dispersaleventsnum_yseq)
           
           dK <- function(x, L, v, mu) { # K distribution
             return(2 * (v/mu)^((v + L)/2) * x^((v + L - 2)/2) * besselK(2 * sqrt(x * v/mu), nu = v - L)/(gamma(v) * gamma(L)))
@@ -3309,7 +3303,7 @@ run_app <- function() {
           
           clockrate_mean <- 1
           if (!is.null(input$dispersaleventnum_NBmean)) {
-            clockrate_mean <- input$dispersaleventnum_NBmean/tree_values$tree_length
+            clockrate_mean <- input$dispersaleventnum_NBmean / tree_values$tree_length
           }
           
           y_seq <- dgamma(x_seq, shape = 1, scale = clockrate_mean)
@@ -3440,28 +3434,28 @@ run_app <- function() {
     #######################################################
     
     focalparamsummary_logfile_defaultupload_paths <- list(paste0(extdata_path, c(
-                                                                   "post_processing/ctmc/HIV_datasetA_underprior_run1.log",
-                                                            "post_processing/ctmc/HIV_datasetA_underprior_run2.log",
-                                                            "post_processing/ctmc/HIV_datasetA_posterior_run1.log",
-                                                            "post_processing/ctmc/HIV_datasetA_posterior_run2.log",
-                                                            "post_processing/ctmc/HIV_datasetA_datacloning5_run1.log",
-                                                            "post_processing/ctmc/HIV_datasetA_datacloning5_run2.log",
-                                                            "post_processing/ctmc/HIV_datasetA_datacloning20_run1.log",
-                                                            "post_processing/ctmc/HIV_datasetA_datacloning20_run2.log")),
-                                                          paste0(extdata_path, c("post_processing/exphyper/HIV_datasetA_underprior_run1.log",
-                                                            "post_processing/exphyper/HIV_datasetA_underprior_run2.log",
-                                                            "post_processing/exphyper/HIV_datasetA_posterior_run1.log",
-                                                            "post_processing/exphyper/HIV_datasetA_posterior_run2.log",
-                                                            "post_processing/exphyper/HIV_datasetA_datacloning5_run1.log",
-                                                            "post_processing/exphyper/HIV_datasetA_datacloning5_run2.log",
-                                                            "post_processing/exphyper/HIV_datasetA_datacloning20_run1.log",
-                                                            "post_processing/exphyper/HIV_datasetA_datacloning20_run2.log")))
+      "post_processing/ctmc/HIV_datasetA_underprior_run1.log",
+      "post_processing/ctmc/HIV_datasetA_underprior_run2.log",
+      "post_processing/ctmc/HIV_datasetA_posterior_run1.log",
+      "post_processing/ctmc/HIV_datasetA_posterior_run2.log",
+      "post_processing/ctmc/HIV_datasetA_datacloning5_run1.log",
+      "post_processing/ctmc/HIV_datasetA_datacloning5_run2.log",
+      "post_processing/ctmc/HIV_datasetA_datacloning20_run1.log",
+      "post_processing/ctmc/HIV_datasetA_datacloning20_run2.log")),
+      paste0(extdata_path, c("post_processing/exphyper/HIV_datasetA_underprior_run1.log",
+                             "post_processing/exphyper/HIV_datasetA_underprior_run2.log",
+                             "post_processing/exphyper/HIV_datasetA_posterior_run1.log",
+                             "post_processing/exphyper/HIV_datasetA_posterior_run2.log",
+                             "post_processing/exphyper/HIV_datasetA_datacloning5_run1.log",
+                             "post_processing/exphyper/HIV_datasetA_datacloning5_run2.log",
+                             "post_processing/exphyper/HIV_datasetA_datacloning20_run1.log",
+                             "post_processing/exphyper/HIV_datasetA_datacloning20_run2.log")))
     
     input_default_static_focalparamsummary <- lapply(focalparamsummary_logfile_defaultupload_paths, function(x) {
       data.frame(name = basename(x), datapath = x, check.names = F, stringsAsFactors = F)
     })
     
-    observeEvent(input$focalparamsummary_logfile_defaultupload, {
+    shiny::observeEvent(input$focalparamsummary_logfile_defaultupload, {
       if (input$focalparamsummary_logfile_defaultupload) {
         if (focalparamsummary_loginputset$num == 1) {
           shinyjs::runjs("$('#focalparamsummary_loginput_add').click();")
@@ -3476,21 +3470,21 @@ run_app <- function() {
     })
     
     # dynamically rendering input fields according to user specification
-    focalparamsummary_loginputset <- reactiveValues(num = 1L, num_inputui = 1L)
+    focalparamsummary_loginputset <- shiny::reactiveValues(num = 1L, num_inputui = 1L)
     # add
-    observeEvent(input$focalparamsummary_loginput_add, {
+    shiny::observeEvent(input$focalparamsummary_loginput_add, {
       focalparamsummary_loginputset$num <- focalparamsummary_loginputset$num + 1L
       focalparamsummary_loginputset$num_inputui <- focalparamsummary_loginputset$num_inputui + 1L
       
       insertUI(selector = "#focalparamsummary_loginput_addremove_div", where = "beforeBegin", immediate = T,
-               ui = div(id = paste0("focalparamsummary_logfile_div", focalparamsummary_loginputset$num),
-                        class = ifelse(input$focalparamsummary_logfile_defaultupload, "divdisabled", ""),
-                        fileInput(inputId = paste0("focalparamsummary_logfile", focalparamsummary_loginputset$num), 
-                                  label = paste0("Estimate log file(s) under prior No. ", focalparamsummary_loginputset$num), 
-                                  multiple = T, accept = ".log")))
+               ui = shiny::div(id = paste0("focalparamsummary_logfile_div", focalparamsummary_loginputset$num),
+                               class = ifelse(input$focalparamsummary_logfile_defaultupload, "divdisabled", ""),
+                               fileInput(inputId = paste0("focalparamsummary_logfile", focalparamsummary_loginputset$num), 
+                                         label = paste0("Estimate log file(s) under prior No. ", focalparamsummary_loginputset$num), 
+                                         multiple = T, accept = ".log")))
     })
     # remove
-    observeEvent(input$focalparamsummary_loginput_remove, {
+    shiny::observeEvent(input$focalparamsummary_loginput_remove, {
       if (focalparamsummary_loginputset$num > 1) {
         removeUI(selector = paste0("#focalparamsummary_logfile_div", focalparamsummary_loginputset$num))
         focalparamsummary_loginputset$num <- focalparamsummary_loginputset$num - 1L
@@ -3498,24 +3492,24 @@ run_app <- function() {
       }
     })
     
-    observe({
+    shiny::observe({
       for (i in 1:focalparamsummary_loginputset$num_inputui) {
         shinyjs::toggleClass(id = paste0("focalparamsummary_logfile_div", i), class = "divdisabled", 
                              condition = input$focalparamsummary_logfile_defaultupload)
       }
     })
-    observe({
+    shiny::observe({
       shinyjs::toggleClass(id = "focalparamsummary_loginput_addremove_div", class = "divdisabled", 
                            condition = input$focalparamsummary_logfile_defaultupload)
     })
     
-    focalparamsummary_logfileset <- reactiveValues(file = NULL)
+    focalparamsummary_logfileset <- shiny::reactiveValues(file = NULL)
     
-    observe({
+    shiny::observe({
       isolate(focalparamsummary_logfileset$file <- vector("list", focalparamsummary_loginputset$num))
       for (i in 1:focalparamsummary_loginputset$num) {
         if (input$focalparamsummary_logfile_defaultupload) {
-          req(focalparamsummary_loginputset$num == length(input_default_static_focalparamsummary))
+          shiny::req(focalparamsummary_loginputset$num == length(input_default_static_focalparamsummary))
           isolate(focalparamsummary_logfileset$file[[i]] <- input_default_static_focalparamsummary[[i]])
         } else {
           if (!is.null(input[[paste0("focalparamsummary_logfile", i)]])) {
@@ -3528,9 +3522,9 @@ run_app <- function() {
     # dynamically rendering clone number, burnin, and include or not
     output$focalparamsummary_logprocessing_ui <- renderUI({
       
-      req(focalparamsummary_loginputset$num == length(focalparamsummary_logfileset$file))
+      shiny::req(focalparamsummary_loginputset$num == length(focalparamsummary_logfileset$file))
       
-      focalparamsummary_logprocessing_ui_list <- tagList()
+      focalparamsummary_logprocessing_ui_list <- shiny::tagList()
       
       logprocessing_perpanel_height <- 540 / focalparamsummary_loginputset$num
       if (logprocessing_perpanel_height < 200) logprocessing_perpanel_height <- 200
@@ -3560,24 +3554,24 @@ run_app <- function() {
                                                                                    "\"><span class=\"glyphicon glyphicon-chevron-up\" aria-hidden=\"true\"></span>", 
                                                                                    "Settings for estimate log file(s) under prior model No. ", i, 
                                                                                    "</a></p></div>")),
-                                                                       div(id = paste0("focalparamsummary_logprocessing", i), 
-                                                                           class = "panel-collapse collapse in", 
-                                                                           fluidRow(style = paste0("max-height: ", logprocessing_perpanel_height, "px; overflow: auto; background-color: #EBF5FB; padding: 2px 10px 5px 10px;"),
-                                                                                    lapply(1:nrow(focalparamsummary_logfileset$file[[i]]), function(j) {
-                                                                                      tagList(
-                                                                                        p(focalparamsummary_logfileset$file[[i]]$name[j], align = "center", 
-                                                                                          style = "font-size: 95%; font-weight: bold;"),
-                                                                                        numericInput(inputId = paste0("focalparamsummary_logfile", i, "_log", j, "_likelihoodpower"), 
-                                                                                                     label = "Number of copies of the data",
-                                                                                                     value = powers[j], min = 0),
-                                                                                        checkboxInput(inputId = paste0("focalparamsummary_logfile", i, "_log", j, "_include"),
-                                                                                                      label = "include this log file", value = T),
-                                                                                        sliderInput(inputId = paste0("focalparamsummary_logfile", i, "_log", j, "_burnin"),
-                                                                                                    label = "burn-in proportion",
-                                                                                                    min = 0, max = 99, value = 10),
-                                                                                        p("", align = "center", style = "font-size: 85%;"))
-                                                                                    })[order(powers)])
-                                                                           
+                                                                       shiny::div(id = paste0("focalparamsummary_logprocessing", i), 
+                                                                                  class = "panel-collapse collapse in", 
+                                                                                  shiny::fluidRow(style = paste0("max-height: ", logprocessing_perpanel_height, "px; overflow: auto; background-color: #EBF5FB; padding: 2px 10px 5px 10px;"),
+                                                                                                  lapply(1:nrow(focalparamsummary_logfileset$file[[i]]), function(j) {
+                                                                                                    shiny::tagList(
+                                                                                                      p(focalparamsummary_logfileset$file[[i]]$name[j], align = "center", 
+                                                                                                        style = "font-size: 95%; font-weight: bold;"),
+                                                                                                      numericInput(inputId = paste0("focalparamsummary_logfile", i, "_log", j, "_likelihoodpower"), 
+                                                                                                                   label = "Number of copies of the data",
+                                                                                                                   value = powers[j], min = 0),
+                                                                                                      shiny::checkboxInput(inputId = paste0("focalparamsummary_logfile", i, "_log", j, "_include"),
+                                                                                                                           label = "include this log file", value = T),
+                                                                                                      sliderInput(inputId = paste0("focalparamsummary_logfile", i, "_log", j, "_burnin"),
+                                                                                                                  label = "burn-in proportion",
+                                                                                                                  min = 0, max = 99, value = 10),
+                                                                                                      p("", align = "center", style = "font-size: 85%;"))
+                                                                                                  })[order(powers)])
+                                                                                  
                                                                        ))
           if (i != focalparamsummary_loginputset$num) {
             focalparamsummary_logprocessing_ui_list <- tagAppendChildren(focalparamsummary_logprocessing_ui_list, h6(""))
@@ -3589,25 +3583,25 @@ run_app <- function() {
     })
     
     # sanity check to make sure that at least one log file exist under each prior model
-    observe({
+    shiny::observe({
       
-      req(focalparamsummary_loginputset$num == length(focalparamsummary_logfileset$file))
+      shiny::req(focalparamsummary_loginputset$num == length(focalparamsummary_logfileset$file))
       
       for (i in 1:focalparamsummary_loginputset$num) {
-        req(!is.null(focalparamsummary_logfileset$file[[i]]))
+        shiny::req(!is.null(focalparamsummary_logfileset$file[[i]]))
         sum <- 0
         
         for (j in 1:nrow(focalparamsummary_logfileset$file[[i]])) {
-          req(!is.null(input[[paste0("focalparamsummary_logfile", i, "_log", j, "_include")]]))
+          shiny::req(!is.null(input[[paste0("focalparamsummary_logfile", i, "_log", j, "_include")]]))
           sum <- sum + input[[paste0("focalparamsummary_logfile", i, "_log", j, "_include")]]
         }
         
         if (sum == 0) {
-          showModal(modalDialog(paste0("No log file is included for prior model ", i,
-                                       ". At least one log file needs to be included under each prior model."),
-                                title = "Invalid input",
-                                easyClose = F,
-                                size = "m"
+          shiny::showModal(modalDialog(paste0("No log file is included for prior model ", i,
+                                              ". At least one log file needs to be included under each prior model."),
+                                       title = "Invalid input",
+                                       easyClose = F,
+                                       size = "m"
           ))
           break
         }
@@ -3615,7 +3609,7 @@ run_app <- function() {
     })
     
     # function below not working, couldn't figure out why
-    observe({
+    shiny::observe({
       lapply(1:focalparamsummary_loginputset$num, function(i) {
         shinyjs::runjs(HTML(paste0("$('#focalparamsummary_logprocessing", i, "').on('shown.bs.collapse', function() {
                               $('#focalparamsummary_logprocessing_panel", i, "').find('.glyphicon-chevron-down').addClass('glyphicon-chevron-up').removeClass('glyphicon-chevron-down');
@@ -3630,11 +3624,11 @@ run_app <- function() {
     # render prior model name ui
     output$focalparamsummary_priormodelname_ui <- renderUI({
       
-      req(focalparamsummary_loginputset$num == length(focalparamsummary_logfileset$file))
-      focalparamsummary_priormodelname_ui_list <- tagList()
+      shiny::req(focalparamsummary_loginputset$num == length(focalparamsummary_logfileset$file))
+      focalparamsummary_priormodelname_ui_list <- shiny::tagList()
       
       for (i in 1:focalparamsummary_loginputset$num) {
-        req((!is.null(focalparamsummary_logfileset$file[[i]])) && (nrow(focalparamsummary_logfileset$file[[i]]) >= 1))
+        shiny::req((!is.null(focalparamsummary_logfileset$file[[i]])) && (nrow(focalparamsummary_logfileset$file[[i]]) >= 1))
         
         focalparamsummary_priormodelname_ui_list <- tagAppendChildren(focalparamsummary_priormodelname_ui_list,
                                                                       textInput(inputId = paste0("focalparamsummary_priormodelname", i),
@@ -3647,24 +3641,24 @@ run_app <- function() {
     
     
     # store reactive values
-    focalparamsummary_values <- reactiveValues(paramnames_shared_focal = NULL, paramnames_shared_nonfocal = NULL, 
-                                               paramname_selected = NULL, 
-                                               focalparam_alldf_raw = NULL, focalparam_alldf_processed = NULL)
+    focalparamsummary_values <- shiny::reactiveValues(paramnames_shared_focal = NULL, paramnames_shared_nonfocal = NULL, 
+                                                      paramname_selected = NULL, 
+                                                      focalparam_alldf_raw = NULL, focalparam_alldf_processed = NULL)
     
     # get the parameter list first
-    observe({
+    shiny::observe({
       
       focalparamsummary_values$paramnames_shared_focal <- NULL
       focalparamsummary_values$paramnames_shared_nonfocal <- NULL
       
-      req(focalparamsummary_loginputset$num == length(focalparamsummary_logfileset$file))
+      shiny::req(focalparamsummary_loginputset$num == length(focalparamsummary_logfileset$file))
       for (i in 1:focalparamsummary_loginputset$num) {
-        req(focalparamsummary_logfileset$file[[i]])
+        shiny::req(focalparamsummary_logfileset$file[[i]])
       }
       
       paramnames <- list()
       for (i in 1:focalparamsummary_loginputset$num) {
-        req((!is.null(focalparamsummary_logfileset$file[[i]])) && (nrow(focalparamsummary_logfileset$file[[i]]) >= 1))
+        shiny::req((!is.null(focalparamsummary_logfileset$file[[i]])) && (nrow(focalparamsummary_logfileset$file[[i]]) >= 1))
         
         for (j in 1:nrow(focalparamsummary_logfileset$file[[i]])) {
           paramnames <- c(paramnames, list(colnames(read.table(focalparamsummary_logfileset$file[[i]]$datapath[j], 
@@ -3714,17 +3708,17 @@ run_app <- function() {
     # generate a drop down menu whose fields are the column names (except for the iteration)
     output$focalparamsummary_paramname_ui <- renderUI({
       
-      req(is.null(focalparamsummary_values$paramnames_shared_focal) + is.null(focalparamsummary_values$paramnames_shared_nonfocal) < 2)
-      req(focalparamsummary_loginputset$num == length(focalparamsummary_logfileset$file))
+      shiny::req(is.null(focalparamsummary_values$paramnames_shared_focal) + is.null(focalparamsummary_values$paramnames_shared_nonfocal) < 2)
+      shiny::req(focalparamsummary_loginputset$num == length(focalparamsummary_logfileset$file))
       
       for (i in 1:focalparamsummary_loginputset$num) {
-        req(focalparamsummary_logfileset$file[[i]])
+        shiny::req(focalparamsummary_logfileset$file[[i]])
       }
       
       paramnames_shared_focal <- focalparamsummary_values$paramnames_shared_focal
       paramnames_shared_nonfocal <- focalparamsummary_values$paramnames_shared_nonfocal
       
-      focalparamsummary_paramname_ui_list <- tagList()
+      focalparamsummary_paramname_ui_list <- shiny::tagList()
       focalparamsummary_paramname_ui_list <- tagAppendChildren(focalparamsummary_paramname_ui_list, 
                                                                h2(''),
                                                                p("Select the parameter to summarize", align = "center", 
@@ -3738,22 +3732,22 @@ run_app <- function() {
         }
         
         focalparamsummary_paramname_ui_list <- tagAppendChildren(focalparamsummary_paramname_ui_list,
-                                                                 radioButtons(inputId = "focalparamsummary_paramnameshared_focallist",
-                                                                              label = NULL, choices = paramnames_radiobutton_list))
+                                                                 shiny::radioButtons(inputId = "focalparamsummary_paramnameshared_focallist",
+                                                                                     label = NULL, choices = paramnames_radiobutton_list))
       }
       
       if (!is.null(paramnames_shared_nonfocal)) {
         focalparamsummary_paramname_ui_list <- tagAppendChildren(focalparamsummary_paramname_ui_list,
-                                                                 div(id = "focalparamsummary_paramnameshared_nonfocallist_div", style = "display: none;", 
-                                                                     selectInput(inputId = "focalparamsummary_paramnameshared_nonfocallist", label = NULL, 
-                                                                                 choices = paramnames_shared_nonfocal, selectize = F)))
+                                                                 shiny::div(id = "focalparamsummary_paramnameshared_nonfocallist_div", style = "display: none;", 
+                                                                            shiny::selectInput(inputId = "focalparamsummary_paramnameshared_nonfocallist", label = NULL, 
+                                                                                               choices = paramnames_shared_nonfocal, selectize = F)))
       }
       
       focalparamsummary_paramname_ui_list
     })
     
     # only show the drop down menu when the focal parameter is not in the parameter list or users choose to show other
-    observe({
+    shiny::observe({
       focalparamsummary_loginputset$num
       nonfocallist_enabled <- ((is.null(focalparamsummary_values$paramnames_shared_focal)) || (input$focalparamsummary_paramnameshared_focallist == "show others")) && (!is.null(focalparamsummary_values$paramnames_shared_nonfocal)) 
       shinyjs::toggle(id = "focalparamsummary_paramnameshared_nonfocallist_div", condition = nonfocallist_enabled)
@@ -3761,12 +3755,12 @@ run_app <- function() {
     
     # only show the start processing button when the upstream settings are completer and it's not been clicked 
     # or when any of the upstream settings were invalidated so that user need to re-read in the log files
-    focalparamsummary_startprocessing_status <- reactiveValues(enabled = F, clicked = F)
-    observe({
+    focalparamsummary_startprocessing_status <- shiny::reactiveValues(enabled = F, clicked = F)
+    shiny::observe({
       shinyjs::toggle(id = "focalparamsummary_startprocessing", condition = focalparamsummary_startprocessing_status$enabled)
     })
     
-    observe({
+    shiny::observe({
       
       focalparamsummary_startprocessing_enabled <- T
       focalparamsummary_startprocessing_clicked <- focalparamsummary_startprocessing_status$clicked
@@ -3778,7 +3772,7 @@ run_app <- function() {
         focalparamsummary_startprocessing_enabled <- F
         focalparamsummary_startprocessing_clicked <- F
       } else {
-        req(focalparamsummary_loginputset$num == length(focalparamsummary_logfileset$file))
+        shiny::req(focalparamsummary_loginputset$num == length(focalparamsummary_logfileset$file))
         for (i in 1:focalparamsummary_loginputset$num) {
           if (is.null(focalparamsummary_logfileset$file[[i]]) || focalparamsummary_logfileset$file[[i]] == "" || nrow(focalparamsummary_logfileset$file[[i]]) < 1) {
             focalparamsummary_startprocessing_enabled <- F
@@ -3792,7 +3786,7 @@ run_app <- function() {
     })
     
     # store the selected parameter name
-    observe({
+    shiny::observe({
       if ((!is.null(input$focalparamsummary_paramnameshared_focallist)) && (input$focalparamsummary_paramnameshared_focallist != "show others")) {
         focalparamsummary_values$paramname_selected <- input$focalparamsummary_paramnameshared_focallist
       } else if (!is.null(input$focalparamsummary_paramnameshared_nonfocallist)) {
@@ -3804,18 +3798,18 @@ run_app <- function() {
     })
     
     # enable the second tab (processing setting) only when all the initial processing is complete
-    observe({
+    shiny::observe({
       focalparamsummary_tab2_disabled <- (input$focalparamsummary_startprocessing == 0) || (!focalparamsummary_startprocessing_status$clicked) || is.null(focalparamsummary_values$focalparam_alldf_processed)
       
       shinyjs::toggleClass(selector = "#focalparamsummary_tabs li a[data-value=processing_settings]", class = "divdisabled", 
                            condition = focalparamsummary_tab2_disabled)
       if (!focalparamsummary_tab2_disabled) {
-        updateNavlistPanel(session, inputId = "focalparamsummary_tabs", selected = "processing_settings")
+        shiny::updateNavlistPanel(session, inputId = "focalparamsummary_tabs", selected = "processing_settings")
       }
     })
     
     # enable the third tab (processing setting) only when all the initial processing is complete
-    observe({
+    shiny::observe({
       focalparamsummary_tab3_disabled <- (input$focalparamsummary_startprocessing == 0) || (!focalparamsummary_startprocessing_status$clicked) || is.null(focalparamsummary_values$focalparam_alldf_processed)
       
       shinyjs::toggleClass(selector = "#focalparamsummary_tabs li a[data-value=download_output]", class = "divdisabled", 
@@ -3823,22 +3817,22 @@ run_app <- function() {
     })
     
     # enable the results visualization panel only when all the initial processing is complete
-    observe({
+    shiny::observe({
       focalparamsummary_tab2_disabled <- (input$focalparamsummary_startprocessing == 0) || (!focalparamsummary_startprocessing_status$clicked) || is.null(focalparamsummary_values$focalparam_alldf_processed)
       shinyjs::toggle(id = "focalparamsummary_result_div", condition = !focalparamsummary_tab2_disabled)
     })
     
     # reading in the posterior log files
     # computational expensive step (so only will be executed when the start processing button is clicked)
-    observeEvent(input$focalparamsummary_startprocessing, {
+    shiny::observeEvent(input$focalparamsummary_startprocessing, {
       
-      req(focalparamsummary_loginputset$num >= 1)
-      req(focalparamsummary_values$paramname_selected)
+      shiny::req(focalparamsummary_loginputset$num >= 1)
+      shiny::req(focalparamsummary_values$paramname_selected)
       focalparam_alldf_raw <- vector("list", focalparamsummary_loginputset$num)
       
-      req(focalparamsummary_loginputset$num == length(focalparamsummary_logfileset$file))
+      shiny::req(focalparamsummary_loginputset$num == length(focalparamsummary_logfileset$file))
       for (i in 1:focalparamsummary_loginputset$num) {
-        req(focalparamsummary_logfileset$file[[i]])
+        shiny::req(focalparamsummary_logfileset$file[[i]])
       }
       
       lognum_all <- sum(sapply(1:focalparamsummary_loginputset$num, function(i) nrow(focalparamsummary_logfileset$file[[i]])))
@@ -3919,23 +3913,23 @@ run_app <- function() {
     
     # additional processing step (after the log files have been read in)
     # computational inexpensive step (will be invalidated thus re-executed frequently)
-    observe({
+    shiny::observe({
       
-      req(focalparamsummary_values$focalparam_alldf_raw)
-      req(focalparamsummary_loginputset$num == length(focalparamsummary_logfileset$file))
+      shiny::req(focalparamsummary_values$focalparam_alldf_raw)
+      shiny::req(focalparamsummary_loginputset$num == length(focalparamsummary_logfileset$file))
       for (i in 1:focalparamsummary_loginputset$num) {
-        req(focalparamsummary_logfileset$file[[i]])
+        shiny::req(focalparamsummary_logfileset$file[[i]])
       }
       
       focalparam_alldf_raw <- focalparamsummary_values$focalparam_alldf_raw
       focalparam_alldf_processed <- vector("list", length(focalparam_alldf_raw))
       
-      req(length(focalparam_alldf_raw) == focalparamsummary_loginputset$num)
+      shiny::req(length(focalparam_alldf_raw) == focalparamsummary_loginputset$num)
       
       for (i in 1:focalparamsummary_loginputset$num) {
         
         focalparam_alldf <- focalparam_alldf_raw[[i]]
-        req(length(focalparam_alldf) == nrow(focalparamsummary_logfileset$file[[i]]))
+        shiny::req(length(focalparam_alldf) == nrow(focalparamsummary_logfileset$file[[i]]))
         
         posterior_notinpowerposterior_exist <- prior_notinpowerposterior_exist <- F
         
@@ -4067,9 +4061,9 @@ run_app <- function() {
   });")
     
     # only allow y-axis to be on the log scale (and also set to be the default) when all values of the selected parameter are strictly positive
-    observe({
-      req(focalparamsummary_values$focalparam_alldf_processed)
-      req(focalparamsummary_values$paramname_selected)
+    shiny::observe({
+      shiny::req(focalparamsummary_values$focalparam_alldf_processed)
+      shiny::req(focalparamsummary_values$paramname_selected)
       
       yaxis_log <- F
       if (focalparamsummary_values$paramname_selected %in% colnames(focalparamsummary_values$focalparam_alldf_processed[[1]])) {
@@ -4084,15 +4078,15 @@ run_app <- function() {
     })
     
     # use the selected parameter name (as the column name of the log file) as the y-axis name
-    observe({
-      req(focalparamsummary_values$paramname_selected)
+    shiny::observe({
+      shiny::req(focalparamsummary_values$paramname_selected)
       updateTextInput(session = session, inputId = "focalparamsummary_plot_y_lab", value = focalparamsummary_values$paramname_selected)
     })
     
     # get the default value for the plot name
-    observe({
-      req(focalparamsummary_logfileset$file[[1]])
-      req(focalparamsummary_values$paramname_selected)
+    shiny::observe({
+      shiny::req(focalparamsummary_logfileset$file[[1]])
+      shiny::req(focalparamsummary_values$paramname_selected)
       
       file_name <- paste0(unlist(strsplit(focalparamsummary_logfileset$file[[1]]$name[1], "_underprior|_posterior|_datacloning|_MLE"))[1], 
                           "_", focalparamsummary_values$paramname_selected, "_datacloning")
@@ -4100,18 +4094,18 @@ run_app <- function() {
     })
     
     # check the device plotting region width (so that we can set the height accordingly)
-    observe({
-      req(focalparamsummary_values$focalparam_alldf_processed)
-      req(focalparamsummary_values$paramname_selected)
+    shiny::observe({
+      shiny::req(focalparamsummary_values$focalparam_alldf_processed)
+      shiny::req(focalparamsummary_values$paramname_selected)
       
       shinyjs::runjs('Shiny.onInputChange("focalparamsummary_plot_width", document.getElementById("focalparamsummary_plot").offsetWidth);')
     })
     
     # plot the series of box plots
-    observe({
+    shiny::observe({
       output$focalparamsummary_plot <- renderPlot({
         
-        req(focalparamsummary_values$focalparam_alldf_processed)
+        shiny::req(focalparamsummary_values$focalparam_alldf_processed)
         focalparam_alldf_processed <- focalparamsummary_values$focalparam_alldf_processed
         
         value_list <- list()
@@ -4428,7 +4422,7 @@ run_app <- function() {
     # render the parameter summary table
     output$focalparamsummary_table <- DT::renderDataTable({
       
-      req(focalparamsummary_values$focalparam_alldf_processed)
+      shiny::req(focalparamsummary_values$focalparam_alldf_processed)
       focalparam_alldf_processed <- focalparamsummary_values$focalparam_alldf_processed
       
       value_list <- list()
@@ -4489,9 +4483,9 @@ run_app <- function() {
       focalparamsummary_df
     })
     
-    observe({
-      req(focalparamsummary_logfileset$file[[1]])
-      req(focalparamsummary_values$paramname_selected)
+    shiny::observe({
+      shiny::req(focalparamsummary_logfileset$file[[1]])
+      shiny::req(focalparamsummary_values$paramname_selected)
       
       file_name <- paste0(unlist(strsplit(focalparamsummary_logfileset$file[[1]]$name[1], "_underprior|_posterior|_datacloning|_MLE"))[1],
                           "_", focalparamsummary_values$paramname_selected, "_datacloning")
@@ -4581,19 +4575,19 @@ run_app <- function() {
     ###################
     
     focalparam2summary_logfile_defaultupload_paths <- list(paste0(extdata_path, c("post_processing/ctmc/HIV_datasetA_underprior_run1.log",
-                                                             "post_processing/ctmc/HIV_datasetA_underprior_run2.log",
-                                                             "post_processing/ctmc/HIV_datasetA_posterior_run1.log",
-                                                             "post_processing/ctmc/HIV_datasetA_posterior_run2.log")),
+                                                                                  "post_processing/ctmc/HIV_datasetA_underprior_run2.log",
+                                                                                  "post_processing/ctmc/HIV_datasetA_posterior_run1.log",
+                                                                                  "post_processing/ctmc/HIV_datasetA_posterior_run2.log")),
                                                            paste0(extdata_path, c("post_processing/exphyper/HIV_datasetA_underprior_run1.log",
-                                                             "post_processing/exphyper/HIV_datasetA_underprior_run2.log",
-                                                             "post_processing/exphyper/HIV_datasetA_posterior_run1.log",
-                                                             "post_processing/exphyper/HIV_datasetA_posterior_run2.log")))
+                                                                                  "post_processing/exphyper/HIV_datasetA_underprior_run2.log",
+                                                                                  "post_processing/exphyper/HIV_datasetA_posterior_run1.log",
+                                                                                  "post_processing/exphyper/HIV_datasetA_posterior_run2.log")))
     
     input_default_static_focalparam2summary <- lapply(focalparam2summary_logfile_defaultupload_paths, function(x) {
       data.frame(name = basename(x), datapath = x, check.names = F, stringsAsFactors = F)
     })
     
-    observeEvent(input$focalparam2summary_logfile_defaultupload, {
+    shiny::observeEvent(input$focalparam2summary_logfile_defaultupload, {
       if (input$focalparam2summary_logfile_defaultupload) {
         if (focalparam2summary_loginputset$num == 1) {
           shinyjs::runjs("$('#focalparam2summary_loginput_add').click();")
@@ -4608,21 +4602,21 @@ run_app <- function() {
     })
     
     # dynamically rendering input fields according to user specification
-    focalparam2summary_loginputset <- reactiveValues(num = 1L, num_inputui = 1L)
+    focalparam2summary_loginputset <- shiny::reactiveValues(num = 1L, num_inputui = 1L)
     # add
-    observeEvent(input$focalparam2summary_loginput_add, {
+    shiny::observeEvent(input$focalparam2summary_loginput_add, {
       focalparam2summary_loginputset$num <- focalparam2summary_loginputset$num + 1L
       focalparam2summary_loginputset$num_inputui <- focalparam2summary_loginputset$num_inputui + 1L
       
       insertUI(selector = "#focalparam2summary_loginput_addremove_div", where = "beforeBegin", 
-               ui = div(id = paste0("focalparam2summary_logfile_div", focalparam2summary_loginputset$num_inputui),
-                        class = ifelse(input$focalparam2summary_logfile_defaultupload, "divdisabled", ""),
-                        fileInput(inputId = paste0("focalparam2summary_logfile", focalparam2summary_loginputset$num_inputui), 
-                                  label = paste0("Estimate log file(s) under prior No. ", focalparam2summary_loginputset$num_inputui), 
-                                  multiple = T, accept = ".log")))
+               ui = shiny::div(id = paste0("focalparam2summary_logfile_div", focalparam2summary_loginputset$num_inputui),
+                               class = ifelse(input$focalparam2summary_logfile_defaultupload, "divdisabled", ""),
+                               fileInput(inputId = paste0("focalparam2summary_logfile", focalparam2summary_loginputset$num_inputui), 
+                                         label = paste0("Estimate log file(s) under prior No. ", focalparam2summary_loginputset$num_inputui), 
+                                         multiple = T, accept = ".log")))
     })
     # remove
-    observeEvent(input$focalparam2summary_loginput_remove, {
+    shiny::observeEvent(input$focalparam2summary_loginput_remove, {
       if (focalparam2summary_loginputset$num > 1) {
         removeUI(selector = paste0("#focalparam2summary_logfile_div", focalparam2summary_loginputset$num_inputui))
         focalparam2summary_loginputset$num <- focalparam2summary_loginputset$num - 1L
@@ -4630,24 +4624,24 @@ run_app <- function() {
       }
     })
     
-    observe({
+    shiny::observe({
       for (i in 1:focalparam2summary_loginputset$num_inputui) {
         shinyjs::toggleClass(id = paste0("focalparam2summary_logfile_div", i), class = "divdisabled", 
                              condition = input$focalparam2summary_logfile_defaultupload)
       }
     })
-    observeEvent(input$focalparam2summary_logfile_defaultupload, {
+    shiny::observeEvent(input$focalparam2summary_logfile_defaultupload, {
       shinyjs::toggleClass(id = "focalparam2summary_loginput_addremove_div", class = "divdisabled", 
                            condition = input$focalparam2summary_logfile_defaultupload)
     })
     
-    focalparam2summary_logfileset <- reactiveValues(file = NULL)
+    focalparam2summary_logfileset <- shiny::reactiveValues(file = NULL)
     
-    observe({
+    shiny::observe({
       isolate(focalparam2summary_logfileset$file <- vector("list", focalparam2summary_loginputset$num))
       for (i in 1:focalparam2summary_loginputset$num) {
         if (input$focalparam2summary_logfile_defaultupload) {
-          req(focalparam2summary_loginputset$num == length(input_default_static_focalparam2summary))
+          shiny::req(focalparam2summary_loginputset$num == length(input_default_static_focalparam2summary))
           isolate(focalparam2summary_logfileset$file[[i]] <- input_default_static_focalparam2summary[[i]])
         } else {
           if (!is.null(input[[paste0("focalparam2summary_logfile", i)]])) {
@@ -4657,12 +4651,12 @@ run_app <- function() {
       }
     })
     
-    input_processed <- reactiveValues()
-    observe({
+    input_processed <- shiny::reactiveValues()
+    shiny::observe({
       
-      req(focalparam2summary_loginputset$num == length(focalparam2summary_logfileset$file))
+      shiny::req(focalparam2summary_loginputset$num == length(focalparam2summary_logfileset$file))
       for (i in 1:focalparam2summary_loginputset$num) {
-        req(!is.null(focalparam2summary_logfileset$file[[i]]))
+        shiny::req(!is.null(focalparam2summary_logfileset$file[[i]]))
       }
       
       input_tmp <- lapply(1:focalparam2summary_loginputset$num, function(i) focalparam2summary_logfileset$file[[i]])
@@ -4675,8 +4669,8 @@ run_app <- function() {
     
     output$focalparam2summary_logprocessing_ui <- renderUI({
       
-      req(focalparam2summary_loginputset$num == length(focalparam2summary_logfileset$file))
-      focalparam2summary_logprocessing_ui_list <- tagList()
+      shiny::req(focalparam2summary_loginputset$num == length(focalparam2summary_logfileset$file))
+      focalparam2summary_logprocessing_ui_list <- shiny::tagList()
       
       logprocessing_perpanel_height <- 540 / focalparam2summary_loginputset$num
       if (logprocessing_perpanel_height < 200) logprocessing_perpanel_height <- 200
@@ -4706,25 +4700,25 @@ run_app <- function() {
                                                                                     "\"><span class=\"glyphicon glyphicon-chevron-up\" aria-hidden=\"true\"></span>", 
                                                                                     "Settings for estimate log file(s) under prior model No. ", i, 
                                                                                     "</a></p></div>")),
-                                                                        div(id = paste0("focalparam2summary_logprocessing", i), 
-                                                                            class = "panel-collapse collapse in", 
-                                                                            fluidRow(style = paste0("max-height: ", logprocessing_perpanel_height, "px; overflow: auto; background-color: #EBF5FB; padding: 2px 10px 5px 10px;"),
-                                                                                     lapply(1:nrow(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]]), function(j) {
-                                                                                       tagList(
-                                                                                         p(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]]$name[j], align = "center", 
-                                                                                           style = "font-size: 95%; font-weight: bold;"),
-                                                                                         radioButtons(inputId = paste0("focalparam2summary_logfile", i, "_log", j, "_likelihoodpower"), 
-                                                                                                      label = "Posterior (with data) or Prior (without data)", 
-                                                                                                      choices = c("posterior", "prior"), 
-                                                                                                      selected = ifelse(powers[j] == 0, "prior", "posterior"), inline = T),
-                                                                                         checkboxInput(inputId = paste0("focalparam2summary_logfile", i, "_log", j, "_include"),
-                                                                                                       label = "include this log file", value = T),
-                                                                                         sliderInput(inputId = paste0("focalparam2summary_logfile", i, "_log", j, "_burnin"),
-                                                                                                     label = "burn-in proportion",
-                                                                                                     min = 0, max = 99, value = 10),
-                                                                                         p("", align = "center", style = "font-size: 85%;"))
-                                                                                     })[order(powers)])
-                                                                            
+                                                                        shiny::div(id = paste0("focalparam2summary_logprocessing", i), 
+                                                                                   class = "panel-collapse collapse in", 
+                                                                                   shiny::fluidRow(style = paste0("max-height: ", logprocessing_perpanel_height, "px; overflow: auto; background-color: #EBF5FB; padding: 2px 10px 5px 10px;"),
+                                                                                                   lapply(1:nrow(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]]), function(j) {
+                                                                                                     shiny::tagList(
+                                                                                                       p(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]]$name[j], align = "center", 
+                                                                                                         style = "font-size: 95%; font-weight: bold;"),
+                                                                                                       shiny::radioButtons(inputId = paste0("focalparam2summary_logfile", i, "_log", j, "_likelihoodpower"), 
+                                                                                                                           label = "Posterior (with data) or Prior (without data)", 
+                                                                                                                           choices = c("posterior", "prior"), 
+                                                                                                                           selected = ifelse(powers[j] == 0, "prior", "posterior"), inline = T),
+                                                                                                       shiny::checkboxInput(inputId = paste0("focalparam2summary_logfile", i, "_log", j, "_include"),
+                                                                                                                            label = "include this log file", value = T),
+                                                                                                       sliderInput(inputId = paste0("focalparam2summary_logfile", i, "_log", j, "_burnin"),
+                                                                                                                   label = "burn-in proportion",
+                                                                                                                   min = 0, max = 99, value = 10),
+                                                                                                       p("", align = "center", style = "font-size: 85%;"))
+                                                                                                   })[order(powers)])
+                                                                                   
                                                                         ))
           if (i != focalparam2summary_loginputset$num) {
             focalparam2summary_logprocessing_ui_list <- tagAppendChildren(focalparam2summary_logprocessing_ui_list, h6(""))
@@ -4737,30 +4731,30 @@ run_app <- function() {
     })
     
     # sanity check to make sure that at least one log file exist under each prior model
-    observe({
+    shiny::observe({
       
       for (i in 1:focalparam2summary_loginputset$num) {
-        req(!is.null(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]]))
+        shiny::req(!is.null(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]]))
         sum <- 0
         
         for (j in 1:nrow(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]])) {
-          req(!is.null(input[[paste0("focalparam2summary_logfile", i, "_log", j, "_include")]]))
+          shiny::req(!is.null(input[[paste0("focalparam2summary_logfile", i, "_log", j, "_include")]]))
           sum <- sum + input[[paste0("focalparam2summary_logfile", i, "_log", j, "_include")]]
         }
         
         if (sum == 0) {
-          showModal(modalDialog(paste0("No log file is included for prior model ", i,
-                                       ". At least one log file needs to be included under each prior model."),
-                                title = "Invalid input",
-                                easyClose = F,
-                                size = "m"
+          shiny::showModal(modalDialog(paste0("No log file is included for prior model ", i,
+                                              ". At least one log file needs to be included under each prior model."),
+                                       title = "Invalid input",
+                                       easyClose = F,
+                                       size = "m"
           ))
           break
         }
       }
     })
     
-    observe({
+    shiny::observe({
       lapply(1:focalparam2summary_loginputset$num, function(i) {
         shinyjs::runjs(HTML(paste0("$('#focalparam2summary_logprocessing", i, "').on('shown.bs.collapse', function() {
                               $('#focalparam2summary_logprocessing_panel", i, "').find('.glyphicon-chevron-down').addClass('glyphicon-chevron-up').removeClass('glyphicon-chevron-down');
@@ -4773,11 +4767,11 @@ run_app <- function() {
     
     output$focalparam2summary_priormodelname_ui <- renderUI({
       
-      req(focalparam2summary_loginputset$num >= 1)
-      focalparam2summary_priormodelname_ui_list <- tagList()
+      shiny::req(focalparam2summary_loginputset$num >= 1)
+      focalparam2summary_priormodelname_ui_list <- shiny::tagList()
       
       for (i in 1:focalparam2summary_loginputset$num) {
-        req((!is.null(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]])) && (nrow(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]]) >= 1))
+        shiny::req((!is.null(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]])) && (nrow(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]]) >= 1))
         
         focalparam2summary_priormodelname_ui_list <- tagAppendChildren(focalparam2summary_priormodelname_ui_list,
                                                                        textInput(inputId = paste0("focalparam2summary_priormodelname", i),
@@ -4789,21 +4783,21 @@ run_app <- function() {
     })
     
     # obtain the parameter list and the selected parameter
-    focalparam2summary_values <- reactiveValues(paramnames_shared_focal = NULL, paramnames_shared_nonfocal = NULL, 
-                                                paramname_selected = NULL, 
-                                                focalparam_alldf_raw = NULL, focalparam_alldf_processed = NULL)
-    observe({
+    focalparam2summary_values <- shiny::reactiveValues(paramnames_shared_focal = NULL, paramnames_shared_nonfocal = NULL, 
+                                                       paramname_selected = NULL, 
+                                                       focalparam_alldf_raw = NULL, focalparam_alldf_processed = NULL)
+    shiny::observe({
       
       focalparam2summary_values$paramnames_shared_focal <- NULL
       focalparam2summary_values$paramnames_shared_nonfocal <- NULL
       
       for (i in 1:focalparam2summary_loginputset$num) {
-        req(focalparam2summary_logfileset$file[[i]])
+        shiny::req(focalparam2summary_logfileset$file[[i]])
       }
       
       paramnames <- list()
       for (i in 1:focalparam2summary_loginputset$num) {
-        req(nrow(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]]) >= 1)
+        shiny::req(nrow(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]]) >= 1)
         
         for (j in 1:nrow(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]])) {
           paramnames <- c(paramnames, list(colnames(read.table(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]]$datapath[j], 
@@ -4854,17 +4848,17 @@ run_app <- function() {
     # generate a drop down menu whose fields are the column names (except for the iteration)
     output$focalparam2summary_paramname_ui <- renderUI({
       
-      req(is.null(focalparam2summary_values$paramnames_shared_focal) + is.null(focalparam2summary_values$paramnames_shared_nonfocal) < 2)
+      shiny::req(is.null(focalparam2summary_values$paramnames_shared_focal) + is.null(focalparam2summary_values$paramnames_shared_nonfocal) < 2)
       
-      req(focalparam2summary_loginputset$num == length(focalparam2summary_logfileset$file))
+      shiny::req(focalparam2summary_loginputset$num == length(focalparam2summary_logfileset$file))
       for (i in 1:focalparam2summary_loginputset$num) {
-        req(focalparam2summary_logfileset$file[[i]])
+        shiny::req(focalparam2summary_logfileset$file[[i]])
       }
       
       paramnames_shared_focal <- focalparam2summary_values$paramnames_shared_focal
       paramnames_shared_nonfocal <- focalparam2summary_values$paramnames_shared_nonfocal
       
-      focalparam2summary_paramname_ui_list <- tagList()
+      focalparam2summary_paramname_ui_list <- shiny::tagList()
       focalparam2summary_paramname_ui_list <- tagAppendChildren(focalparam2summary_paramname_ui_list, 
                                                                 h2(''),
                                                                 p("Select the parameter to summarize", align = "center", 
@@ -4878,32 +4872,32 @@ run_app <- function() {
         }
         
         focalparam2summary_paramname_ui_list <- tagAppendChildren(focalparam2summary_paramname_ui_list,
-                                                                  radioButtons(inputId = "focalparam2summary_paramnameshared_focallist",
-                                                                               label = NULL, choices = paramnames_radiobutton_list))
+                                                                  shiny::radioButtons(inputId = "focalparam2summary_paramnameshared_focallist",
+                                                                                      label = NULL, choices = paramnames_radiobutton_list))
       }
       
       if (!is.null(paramnames_shared_nonfocal)) {
         focalparam2summary_paramname_ui_list <- tagAppendChildren(focalparam2summary_paramname_ui_list,
-                                                                  div(id = "focalparam2summary_paramnameshared_nonfocallist_div", style = "display: none;", 
-                                                                      selectInput(inputId = "focalparam2summary_paramnameshared_nonfocallist", label = NULL, 
-                                                                                  choices = paramnames_shared_nonfocal, selectize = F)))
+                                                                  shiny::div(id = "focalparam2summary_paramnameshared_nonfocallist_div", style = "display: none;", 
+                                                                             shiny::selectInput(inputId = "focalparam2summary_paramnameshared_nonfocallist", label = NULL, 
+                                                                                                choices = paramnames_shared_nonfocal, selectize = F)))
       }
       
       focalparam2summary_paramname_ui_list
     })
     
-    observe({
+    shiny::observe({
       focalparam2summary_loginputset$num
       nonfocallist_enabled <- ((is.null(focalparam2summary_values$paramnames_shared_focal)) || (input$focalparam2summary_paramnameshared_focallist == "show others")) && (!is.null(focalparam2summary_values$paramnames_shared_nonfocal)) 
       shinyjs::toggle(id = "focalparam2summary_paramnameshared_nonfocallist_div", condition = nonfocallist_enabled)
     })
     
-    focalparam2summary_startprocessing_status <- reactiveValues(enabled = F, clicked = F)
-    observe({
+    focalparam2summary_startprocessing_status <- shiny::reactiveValues(enabled = F, clicked = F)
+    shiny::observe({
       shinyjs::toggle(id = "focalparam2summary_startprocessing", condition = focalparam2summary_startprocessing_status$enabled)
     })
     
-    observe({
+    shiny::observe({
       
       focalparam2summary_startprocessing_enabled <- T
       focalparam2summary_startprocessing_clicked <- focalparam2summary_startprocessing_status$clicked
@@ -4927,7 +4921,7 @@ run_app <- function() {
       focalparam2summary_startprocessing_status$clicked <- focalparam2summary_startprocessing_clicked
     })
     
-    observe({
+    shiny::observe({
       if ((!is.null(input$focalparam2summary_paramnameshared_focallist)) && (input$focalparam2summary_paramnameshared_focallist != "show others")) {
         focalparam2summary_values$paramname_selected <- input$focalparam2summary_paramnameshared_focallist
       } else if (!is.null(input$focalparam2summary_paramnameshared_nonfocallist)) {
@@ -4938,39 +4932,39 @@ run_app <- function() {
       }
     })
     
-    observe({
+    shiny::observe({
       focalparam2summary_tab2_disabled <- (input$focalparam2summary_startprocessing == 0) || (!focalparam2summary_startprocessing_status$clicked) || is.null(focalparam2summary_values$focalparam_alldf_processed)
       
       shinyjs::toggleClass(selector = "#focalparam2summary_tabs li a[data-value=processing_settings]", class = "divdisabled", 
                            condition = focalparam2summary_tab2_disabled)
       if (!focalparam2summary_tab2_disabled) {
-        updateNavlistPanel(session, inputId = "focalparam2summary_tabs", selected = "processing_settings")
+        shiny::updateNavlistPanel(session, inputId = "focalparam2summary_tabs", selected = "processing_settings")
       }
     })
     
-    observe({
+    shiny::observe({
       focalparam2summary_tab3_disabled <- (input$focalparam2summary_startprocessing == 0) || (!focalparam2summary_startprocessing_status$clicked) || is.null(focalparam2summary_values$focalparam_alldf_processed)
       
       shinyjs::toggleClass(selector = "#focalparam2summary_tabs li a[data-value=download_output]", class = "divdisabled", 
                            condition = focalparam2summary_tab3_disabled)
     })
     
-    observe({
+    shiny::observe({
       focalparam2summary_tab2_disabled <- (input$focalparam2summary_startprocessing == 0) || (!focalparam2summary_startprocessing_status$clicked) || is.null(focalparam2summary_values$focalparam_alldf_processed)
       shinyjs::toggle(id = "focalparam2summary_result_div", condition = !focalparam2summary_tab2_disabled)
     })
     
     
     # reading in the posterior log files
-    observeEvent(input$focalparam2summary_startprocessing, {
+    shiny::observeEvent(input$focalparam2summary_startprocessing, {
       
-      req(focalparam2summary_loginputset$num >= 1)
-      req(focalparam2summary_values$paramname_selected)
+      shiny::req(focalparam2summary_loginputset$num >= 1)
+      shiny::req(focalparam2summary_values$paramname_selected)
       focalparam_alldf_raw <- vector("list", focalparam2summary_loginputset$num)
       
-      req(focalparam2summary_loginputset$num == length(focalparam2summary_logfileset$file))
+      shiny::req(focalparam2summary_loginputset$num == length(focalparam2summary_logfileset$file))
       for (i in 1:focalparam2summary_loginputset$num) {
-        req(focalparam2summary_logfileset$file[[i]])
+        shiny::req(focalparam2summary_logfileset$file[[i]])
       }
       
       lognum_all <- sum(sapply(1:focalparam2summary_loginputset$num, function(i) nrow(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]])))
@@ -5049,23 +5043,23 @@ run_app <- function() {
       focalparam2summary_startprocessing_status$clicked <- T
     })
     
-    observe({
+    shiny::observe({
       
-      req(focalparam2summary_values$focalparam_alldf_raw)
-      req(focalparam2summary_loginputset$num == length(focalparam2summary_logfileset$file))
+      shiny::req(focalparam2summary_values$focalparam_alldf_raw)
+      shiny::req(focalparam2summary_loginputset$num == length(focalparam2summary_logfileset$file))
       for (i in 1:focalparam2summary_loginputset$num) {
-        req(focalparam2summary_logfileset$file[[i]])
+        shiny::req(focalparam2summary_logfileset$file[[i]])
       }
       
       focalparam_alldf_raw <- focalparam2summary_values$focalparam_alldf_raw
       focalparam_alldf_processed <- vector("list", length(focalparam_alldf_raw))
       
-      req(length(focalparam_alldf_raw) == focalparam2summary_loginputset$num)
+      shiny::req(length(focalparam_alldf_raw) == focalparam2summary_loginputset$num)
       
       for (i in 1:focalparam2summary_loginputset$num) {
         
         focalparam_alldf <- focalparam_alldf_raw[[i]]
-        req(length(focalparam_alldf) == nrow(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]]))
+        shiny::req(length(focalparam_alldf) == nrow(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]]))
         
         posterior_notinpowerposterior_exist <- prior_notinpowerposterior_exist <- F
         
@@ -5196,9 +5190,9 @@ run_app <- function() {
     $('#focalparam2summary_yaxis_edits_panel').find('.glyphicon-chevron-up').addClass('glyphicon-chevron-down').removeClass('glyphicon-chevron-up');
   });")
     
-    observe({
-      req(focalparam2summary_values$focalparam_alldf_processed)
-      req(focalparam2summary_values$paramname_selected)
+    shiny::observe({
+      shiny::req(focalparam2summary_values$focalparam_alldf_processed)
+      shiny::req(focalparam2summary_values$paramname_selected)
       
       yaxis_log <- F
       if (focalparam2summary_values$paramname_selected %in% colnames(focalparam2summary_values$focalparam_alldf_processed[[1]])) {
@@ -5212,32 +5206,32 @@ run_app <- function() {
       }
     })
     
-    observe({
-      req(focalparam2summary_values$paramname_selected)
+    shiny::observe({
+      shiny::req(focalparam2summary_values$paramname_selected)
       updateTextInput(session = session, inputId = "focalparam2summary_plot_y_lab", value = focalparam2summary_values$paramname_selected)
     })
     
-    observe({
-      req(focalparam2summary_logfileset$file[[1]])
-      req(focalparam2summary_values$paramname_selected)
+    shiny::observe({
+      shiny::req(focalparam2summary_logfileset$file[[1]])
+      shiny::req(focalparam2summary_values$paramname_selected)
       
       file_name <- paste0(unlist(strsplit(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", 1)]]$name[1], "_underprior|_posterior|_datacloning|_MLE"))[1], 
                           "_", focalparam2summary_values$paramname_selected, "_robustbayesian")
       updateTextInput(session = session, inputId = "focalparam2summary_plot_downloadname", value = file_name)
     })
     
-    observe({
-      req(focalparam2summary_values$focalparam_alldf_processed)
-      req(focalparam2summary_values$paramname_selected)
+    shiny::observe({
+      shiny::req(focalparam2summary_values$focalparam_alldf_processed)
+      shiny::req(focalparam2summary_values$paramname_selected)
       
       shinyjs::runjs('Shiny.onInputChange("focalparam2summary_plot_width", document.getElementById("focalparam2summary_plot").offsetWidth);')
     })
     
     
-    observe({
+    shiny::observe({
       output$focalparam2summary_plot <- renderPlot({
         
-        req(focalparam2summary_values$focalparam_alldf_processed)
+        shiny::req(focalparam2summary_values$focalparam_alldf_processed)
         focalparam_alldf_processed <- focalparam2summary_values$focalparam_alldf_processed
         
         value_list <- list()
@@ -5507,7 +5501,7 @@ run_app <- function() {
     
     output$focalparam2summary_table <- DT::renderDataTable({
       
-      req(focalparam2summary_values$focalparam_alldf_processed)
+      shiny::req(focalparam2summary_values$focalparam_alldf_processed)
       focalparam_alldf_processed <- focalparam2summary_values$focalparam_alldf_processed
       
       value_list <- list()
@@ -5555,9 +5549,9 @@ run_app <- function() {
       focalparam2summary_df
     })
     
-    observe({
-      req(focalparam2summary_logfileset$file[[1]])
-      req(focalparam2summary_values$paramname_selected)
+    shiny::observe({
+      shiny::req(focalparam2summary_logfileset$file[[1]])
+      shiny::req(focalparam2summary_values$paramname_selected)
       
       file_name <- paste0(unlist(strsplit(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", 1)]]$name[1], "_underprior|_posterior|_datacloning|_MLE"))[1],
                           "_", focalparam2summary_values$paramname_selected, "_robustbayesian")
@@ -5632,40 +5626,40 @@ run_app <- function() {
     ########################
     
     # enable the tree input tab only after user uploads the discrete-trait file (and it's valid)
-    observe({
+    shiny::observe({
       shinyjs::toggleClass(id = "posteriorpredictive_geographyfile_div", class = "divdisabled", 
                            condition = input$posteriorpredictive_geographyfile_defaultupload)
     })
     
     # check for valid input
-    posteriorpredictive_input_condition <- reactiveValues(tree_invalid = T, trait_invalid = T, log_invalid = T, 
-                                                          treetrait_invalid = T, logtree_invalid = T)
-    posteriorpredictive_tree_values <- reactiveValues(tree = NULL)
+    posteriorpredictive_input_condition <- shiny::reactiveValues(tree_invalid = T, trait_invalid = T, log_invalid = T, 
+                                                                 treetrait_invalid = T, logtree_invalid = T)
+    posteriorpredictive_tree_values <- shiny::reactiveValues(tree = NULL)
     posteriorpredictive_states_dat <- reactiveVal()
     
-    observe({
+    shiny::observe({
       if (input$posteriorpredictive_geographyfile_defaultupload) {
         posteriorpredictive_states_dat(read.table(text = gsub("\t", ",", readLines(paste0(extdata_path, "analyses_setup/discrete_trait.txt"))), header = T, sep = ",", stringsAsFactors = F))
       } else if (!is.null(input$geography_file)) {
-        req(input$posteriorpredictive_geographyfile)
+        shiny::req(input$posteriorpredictive_geographyfile)
         posteriorpredictive_states_dat(read.table(text = gsub("\t", ",", readLines(input$posteriorpredictive_geographyfile$datapath)), header = T, sep = ",", stringsAsFactors = F))
       } else {
         posteriorpredictive_states_dat(NULL)
       }
     })
     
-    observe({
+    shiny::observe({
       shinyjs::toggle(id = "posteriorpredictive_geographyfile_attributes", condition = !is.null(posteriorpredictive_states_dat()))
     })
     
-    observe({
-      req(posteriorpredictive_states_dat())
+    shiny::observe({
+      shiny::req(posteriorpredictive_states_dat())
       
       if (!input$posteriorpredictive_geographyfile_header) {
-        showModal(modalDialog("Please edit the discrete-geography file so that the first row indicates column names.",
-                              title = "Invalid input",
-                              easyClose = F,
-                              size = "m"
+        shiny::showModal(modalDialog("Please edit the discrete-geography file so that the first row indicates column names.",
+                                     title = "Invalid input",
+                                     easyClose = F,
+                                     size = "m"
         ))
         posteriorpredictive_input_condition$trait_invalid <- T
       } else {
@@ -5678,7 +5672,7 @@ run_app <- function() {
                         choices = colnames(posteriorpredictive_states_dat()), selected = colnames(posteriorpredictive_states_dat())[2])
     })
     
-    observe({
+    shiny::observe({
       shinyjs::toggleClass(selector = "#posteriorpredictive_input_tabs li a[data-value=logtree]", class = "divdisabled", 
                            condition = is.null(posteriorpredictive_states_dat()) ||
                              (!input$posteriorpredictive_geographyfile_header) || is.null(input$posteriorpredictive_geographyfile_taxoncolumn_name) ||
@@ -5687,13 +5681,13 @@ run_app <- function() {
     
     
     posteriorpredictive_logfile_defaultupload_paths <- list(list(log = paste0(extdata_path, c("post_processing/ctmc/HIV_datasetA_posterior_run1.log",
-                                                                         "post_processing/ctmc/HIV_datasetA_posterior_run2.log")),
+                                                                                              "post_processing/ctmc/HIV_datasetA_posterior_run2.log")),
                                                                  tree = paste0(extdata_path, c("post_processing/ctmc/HIV_datasetA_posterior_run1.trees",
-                                                                          "post_processing/ctmc/HIV_datasetA_posterior_run2.trees"))),
+                                                                                               "post_processing/ctmc/HIV_datasetA_posterior_run2.trees"))),
                                                             list(log = paste0(extdata_path, c("post_processing/exphyper/HIV_datasetA_posterior_run1.log",
-                                                                         "post_processing/exphyper/HIV_datasetA_posterior_run2.log")),
+                                                                                              "post_processing/exphyper/HIV_datasetA_posterior_run2.log")),
                                                                  tree = paste0(extdata_path, c("post_processing/exphyper/HIV_datasetA_posterior_run1.trees",
-                                                                          "post_processing/exphyper/HIV_datasetA_posterior_run2.trees"))))
+                                                                                               "post_processing/exphyper/HIV_datasetA_posterior_run2.trees"))))
     
     input_default_static_posteriorpredictive_logfile <- lapply(posteriorpredictive_logfile_defaultupload_paths, function(x) {
       data.frame(name = basename(x$log), datapath = x$log, check.names = F, stringsAsFactors = F)
@@ -5702,7 +5696,7 @@ run_app <- function() {
       data.frame(name = basename(x$tree), datapath = x$tree, check.names = F, stringsAsFactors = F)
     })
     
-    observeEvent(input$posteriorpredictive_logfile_defaultupload, {
+    shiny::observeEvent(input$posteriorpredictive_logfile_defaultupload, {
       if (input$posteriorpredictive_logfile_defaultupload) {
         if (posteriorpredictive_loginputset$num == 1) {
           shinyjs::runjs("$('#posteriorpredictive_loginput_add').click();")
@@ -5717,26 +5711,26 @@ run_app <- function() {
     })
     
     
-    posteriorpredictive_loginputset <- reactiveValues(num = 1L, num_inputui = 1L)
-    observeEvent(input$posteriorpredictive_loginput_add, {
+    posteriorpredictive_loginputset <- shiny::reactiveValues(num = 1L, num_inputui = 1L)
+    shiny::observeEvent(input$posteriorpredictive_loginput_add, {
       posteriorpredictive_loginputset$num <- posteriorpredictive_loginputset$num + 1L
       posteriorpredictive_loginputset$num_inputui <- posteriorpredictive_loginputset$num_inputui + 1L
       
       insertUI(selector = "#posteriorpredictive_loginput_addremove_div", where = "beforeBegin", 
-               ui = div(id = paste0("posteriorpredictive_logfile_div", posteriorpredictive_loginputset$num),
-                        class = ifelse(input$posteriorpredictive_logfile_defaultupload, "divdisabled", ""),
-                        tagList(h6(''),
-                                p(paste0("Upload estimate files under prior No. ", posteriorpredictive_loginputset$num_inputui), align = "center", 
-                                  style = "font-size: 95%; font-weight: bold;"),
-                                fileInput(inputId = paste0("posteriorpredictive_logfile", posteriorpredictive_loginputset$num_inputui), 
-                                          label = "log file(s)", 
-                                          multiple = T, accept = ".log"),
-                                fileInput(inputId = paste0("posteriorpredictive_treefile", posteriorpredictive_loginputset$num_inputui), 
-                                          label = "tree file(s)",
-                                          multiple = T, accept = c(".trees", ".tree", ".tre")))))
+               ui = shiny::div(id = paste0("posteriorpredictive_logfile_div", posteriorpredictive_loginputset$num),
+                               class = ifelse(input$posteriorpredictive_logfile_defaultupload, "divdisabled", ""),
+                               shiny::tagList(h6(''),
+                                              p(paste0("Upload estimate files under prior No. ", posteriorpredictive_loginputset$num_inputui), align = "center", 
+                                                style = "font-size: 95%; font-weight: bold;"),
+                                              fileInput(inputId = paste0("posteriorpredictive_logfile", posteriorpredictive_loginputset$num_inputui), 
+                                                        label = "log file(s)", 
+                                                        multiple = T, accept = ".log"),
+                                              fileInput(inputId = paste0("posteriorpredictive_treefile", posteriorpredictive_loginputset$num_inputui), 
+                                                        label = "tree file(s)",
+                                                        multiple = T, accept = c(".trees", ".tree", ".tre")))))
       
     })
-    observeEvent(input$posteriorpredictive_loginput_remove, {
+    shiny::observeEvent(input$posteriorpredictive_loginput_remove, {
       if (posteriorpredictive_loginputset$num > 1) {
         removeUI(selector = paste0("#posteriorpredictive_logfile_div", posteriorpredictive_loginputset$num))
         posteriorpredictive_loginputset$num <- posteriorpredictive_loginputset$num - 1L
@@ -5744,25 +5738,25 @@ run_app <- function() {
       }
     })
     
-    observe({
+    shiny::observe({
       for (i in 1:posteriorpredictive_loginputset$num_inputui) {
         shinyjs::toggleClass(id = paste0("posteriorpredictive_logfile_div", i), class = "divdisabled", 
                              condition = input$posteriorpredictive_logfile_defaultupload)
       }
     })
-    observeEvent(input$posteriorpredictive_logfile_defaultupload, {
+    shiny::observeEvent(input$posteriorpredictive_logfile_defaultupload, {
       shinyjs::toggleClass(id = "posteriorpredictive_loginput_addremove_div", class = "divdisabled", 
                            condition = input$posteriorpredictive_logfile_defaultupload)
     })
     
-    posteriorpredictive_logfileset <- reactiveValues(file = NULL)
-    posteriorpredictive_treefileset <- reactiveValues(file = NULL)
-    observe({
+    posteriorpredictive_logfileset <- shiny::reactiveValues(file = NULL)
+    posteriorpredictive_treefileset <- shiny::reactiveValues(file = NULL)
+    shiny::observe({
       isolate(posteriorpredictive_logfileset$file <- vector("list", posteriorpredictive_loginputset$num))
       isolate(posteriorpredictive_treefileset$file <- vector("list", posteriorpredictive_loginputset$num))
       for (i in 1:posteriorpredictive_loginputset$num) {
         if (input$posteriorpredictive_logfile_defaultupload) {
-          req(posteriorpredictive_loginputset$num == length(input_default_static_posteriorpredictive_logfile))
+          shiny::req(posteriorpredictive_loginputset$num == length(input_default_static_posteriorpredictive_logfile))
           isolate(posteriorpredictive_logfileset$file[[i]] <- input_default_static_posteriorpredictive_logfile[[i]])
           isolate(posteriorpredictive_treefileset$file[[i]] <- input_default_static_posteriorpredictive_treefile[[i]])
         } else {
@@ -5777,15 +5771,15 @@ run_app <- function() {
     })
     
     
-    observe({
+    shiny::observe({
       
-      req(posteriorpredictive_states_dat())
-      req(input$posteriorpredictive_geographyfile_traitcolumn_name)
-      req(posteriorpredictive_input_condition$trait_invalid == F)
+      shiny::req(posteriorpredictive_states_dat())
+      shiny::req(input$posteriorpredictive_geographyfile_traitcolumn_name)
+      shiny::req(posteriorpredictive_input_condition$trait_invalid == F)
       
-      req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
+      shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
       for (i in 1:posteriorpredictive_loginputset$num) {
-        req(posteriorpredictive_logfileset$file[[i]])
+        shiny::req(posteriorpredictive_logfileset$file[[i]])
       }
       
       states_dat <- posteriorpredictive_states_dat()
@@ -5796,7 +5790,7 @@ run_app <- function() {
       
       for (i in 1:posteriorpredictive_loginputset$num) {
         
-        req(nrow(posteriorpredictive_logfileset$file[[i]]) >= 1)
+        shiny::req(nrow(posteriorpredictive_logfileset$file[[i]]) >= 1)
         log_invalid <- F
         for (j in 1:nrow(posteriorpredictive_logfileset$file[[i]])) {
           
@@ -5819,27 +5813,27 @@ run_app <- function() {
       
       posteriorpredictive_input_condition$log_invalid <- log_invalid
       if (log_invalid) {
-        showModal(modalDialog("The uploaded log file(s) don't contain the required columns (.clock.rate and/or .rates) or the number of 'rates' elements is not consistent with the number of states in the discrete-geography file (whether the geographic model is symmetric or asymmetric).",
-                              title = "Invalid input",
-                              easyClose = F,
-                              size = "m"
+        shiny::showModal(modalDialog("The uploaded log file(s) don't contain the required columns (.clock.rate and/or .rates) or the number of 'rates' elements is not consistent with the number of states in the discrete-geography file (whether the geographic model is symmetric or asymmetric).",
+                                     title = "Invalid input",
+                                     easyClose = F,
+                                     size = "m"
         ))
       }
     })
     
     
-    observe({
+    shiny::observe({
       
-      req(posteriorpredictive_loginputset$num == length(posteriorpredictive_treefileset$file))
+      shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_treefileset$file))
       for (i in 1:posteriorpredictive_loginputset$num) {
-        req(posteriorpredictive_treefileset$file[[i]])
+        shiny::req(posteriorpredictive_treefileset$file[[i]])
       }
       
       tree1 <- NULL
       tip_lab1 <- NULL
       for (i in 1:posteriorpredictive_loginputset$num) {
         
-        req(nrow(posteriorpredictive_treefileset$file[[i]]) >= 1)
+        shiny::req(nrow(posteriorpredictive_treefileset$file[[i]]) >= 1)
         tree_invalid <- F
         for (j in 1:nrow(posteriorpredictive_treefileset$file[[i]])) {
           
@@ -5870,30 +5864,30 @@ run_app <- function() {
       
       posteriorpredictive_input_condition$tree_invalid <- tree_invalid
       if (tree_invalid) {
-        showModal(modalDialog("No tree in the uploaded tree file or the trees have different tips.",
-                              title = "Invalid input",
-                              easyClose = F,
-                              size = "m"
+        shiny::showModal(modalDialog("No tree in the uploaded tree file or the trees have different tips.",
+                                     title = "Invalid input",
+                                     easyClose = F,
+                                     size = "m"
         ))
       } else {
         posteriorpredictive_tree_values$tree <- tree1
       }
     })
     
-    observe({
-      req(posteriorpredictive_input_condition$tree_invalid == F)
-      req(posteriorpredictive_input_condition$log_invalid == F)
+    shiny::observe({
+      shiny::req(posteriorpredictive_input_condition$tree_invalid == F)
+      shiny::req(posteriorpredictive_input_condition$log_invalid == F)
       
-      req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
-      req(posteriorpredictive_loginputset$num == length(posteriorpredictive_treefileset$file))
+      shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
+      shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_treefileset$file))
       for (i in 1:posteriorpredictive_loginputset$num) {
-        req(posteriorpredictive_logfileset$file[[i]])
-        req(posteriorpredictive_treefileset$file[[i]])
+        shiny::req(posteriorpredictive_logfileset$file[[i]])
+        shiny::req(posteriorpredictive_treefileset$file[[i]])
       }
       
       for (i in 1:posteriorpredictive_loginputset$num) {
-        req(nrow(posteriorpredictive_logfileset$file[[i]]) >= 1)
-        req(nrow(posteriorpredictive_treefileset$file[[i]]) >= 1)
+        shiny::req(nrow(posteriorpredictive_logfileset$file[[i]]) >= 1)
+        shiny::req(nrow(posteriorpredictive_treefileset$file[[i]]) >= 1)
         logtree_invalid <- F
         
         if (nrow(posteriorpredictive_logfileset$file[[i]]) != nrow(posteriorpredictive_treefileset$file[[i]])) {
@@ -5914,40 +5908,40 @@ run_app <- function() {
       
       posteriorpredictive_input_condition$logtree_invalid <- logtree_invalid
       if (logtree_invalid) {
-        showModal(modalDialog("The name of each log file (without the '.log' extension) has to be identical to the corresponding tree file's name (without the '.tree' or '.trees' extension).",
-                              title = "Invalid input",
-                              easyClose = F,
-                              size = "m"
+        shiny::showModal(modalDialog("The name of each log file (without the '.log' extension) has to be identical to the corresponding tree file's name (without the '.tree' or '.trees' extension).",
+                                     title = "Invalid input",
+                                     easyClose = F,
+                                     size = "m"
         ))
       }
       
     })
     
     # sanity check: tree and discrete data match in terms of taxon list
-    observe({
+    shiny::observe({
       
-      req(posteriorpredictive_states_dat())
-      req(input$posteriorpredictive_geographyfile_taxoncolumn_name)
-      req(posteriorpredictive_loginputset$num == length(posteriorpredictive_treefileset$file))
+      shiny::req(posteriorpredictive_states_dat())
+      shiny::req(input$posteriorpredictive_geographyfile_taxoncolumn_name)
+      shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_treefileset$file))
       for (i in 1:posteriorpredictive_loginputset$num) {
-        req(posteriorpredictive_treefileset$file[[i]])
+        shiny::req(posteriorpredictive_treefileset$file[[i]])
       }
       
-      req(posteriorpredictive_tree_values$tree)
-      req(posteriorpredictive_states_dat())
-      req(posteriorpredictive_input_condition$tree_invalid == F)
-      req(posteriorpredictive_input_condition$trait_invalid == F)
+      shiny::req(posteriorpredictive_tree_values$tree)
+      shiny::req(posteriorpredictive_states_dat())
+      shiny::req(posteriorpredictive_input_condition$tree_invalid == F)
+      shiny::req(posteriorpredictive_input_condition$trait_invalid == F)
       
       tip_lab <- sort(posteriorpredictive_tree_values$tree$tip.label)
       if (input$posteriorpredictive_geographyfile_taxoncolumn_name != "") {
         taxa <- sort(as.vector(posteriorpredictive_states_dat()[, input$posteriorpredictive_geographyfile_taxoncolumn_name]))
         
         if (!identical(tip_lab, taxa)) {
-          showModal(modalDialog("Taxa list in the tree file doesn't match the discrete-geography file.",
-                                title = "Invalid input",
-                                easyClose = F,
-                                size = "m"
-                                
+          shiny::showModal(modalDialog("Taxa list in the tree file doesn't match the discrete-geography file.",
+                                       title = "Invalid input",
+                                       easyClose = F,
+                                       size = "m"
+                                       
           ))
           posteriorpredictive_input_condition$treetrait_invalid <- T
         } else {
@@ -5959,8 +5953,8 @@ run_app <- function() {
     
     output$posteriorpredictive_logprocessing_ui <- renderUI({
       
-      req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
-      posteriorpredictive_logprocessing_ui_list <- tagList()
+      shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
+      posteriorpredictive_logprocessing_ui_list <- shiny::tagList()
       
       logprocessing_perpanel_height <- 540 / posteriorpredictive_loginputset$num
       if (logprocessing_perpanel_height < 200) logprocessing_perpanel_height <- 200
@@ -5990,21 +5984,21 @@ run_app <- function() {
                                                                                      "\"><span class=\"glyphicon glyphicon-chevron-up\" aria-hidden=\"true\"></span>", 
                                                                                      "Settings for estimate log file(s) under prior model No. ", i, 
                                                                                      "</a></p></div>")),
-                                                                         div(id = paste0("posteriorpredictive_logprocessing", i), 
-                                                                             class = "panel-collapse collapse in", 
-                                                                             fluidRow(style = paste0("max-height: ", logprocessing_perpanel_height, "px; overflow: auto; background-color: #EBF5FB; padding: 2px 10px 5px 10px;"),
-                                                                                      lapply(1:nrow(posteriorpredictive_logfileset$file[[i]]), function(j) {
-                                                                                        tagList(
-                                                                                          p(posteriorpredictive_logfileset$file[[i]]$name[j], align = "center", 
-                                                                                            style = "font-size: 95%; font-weight: bold;"),
-                                                                                          checkboxInput(inputId = paste0("posteriorpredictive_logfile", i, "_log", j, "_include"),
-                                                                                                        label = "include this log file", value = T),
-                                                                                          sliderInput(inputId = paste0("posteriorpredictive_logfile", i, "_log", j, "_burnin"),
-                                                                                                      label = "burn-in proportion",
-                                                                                                      min = 0, max = 99, value = 10),
-                                                                                          p("", align = "center", style = "font-size: 85%;"))
-                                                                                      })[order(powers)])
-                                                                             
+                                                                         shiny::div(id = paste0("posteriorpredictive_logprocessing", i), 
+                                                                                    class = "panel-collapse collapse in", 
+                                                                                    shiny::fluidRow(style = paste0("max-height: ", logprocessing_perpanel_height, "px; overflow: auto; background-color: #EBF5FB; padding: 2px 10px 5px 10px;"),
+                                                                                                    lapply(1:nrow(posteriorpredictive_logfileset$file[[i]]), function(j) {
+                                                                                                      shiny::tagList(
+                                                                                                        p(posteriorpredictive_logfileset$file[[i]]$name[j], align = "center", 
+                                                                                                          style = "font-size: 95%; font-weight: bold;"),
+                                                                                                        shiny::checkboxInput(inputId = paste0("posteriorpredictive_logfile", i, "_log", j, "_include"),
+                                                                                                                             label = "include this log file", value = T),
+                                                                                                        sliderInput(inputId = paste0("posteriorpredictive_logfile", i, "_log", j, "_burnin"),
+                                                                                                                    label = "burn-in proportion",
+                                                                                                                    min = 0, max = 99, value = 10),
+                                                                                                        p("", align = "center", style = "font-size: 85%;"))
+                                                                                                    })[order(powers)])
+                                                                                    
                                                                          ))
           if (i != posteriorpredictive_loginputset$num) {
             posteriorpredictive_logprocessing_ui_list <- tagAppendChildren(posteriorpredictive_logprocessing_ui_list, h6(""))
@@ -6016,31 +6010,31 @@ run_app <- function() {
     })
     
     # sanity check to make sure that at least one log file exist under each prior model
-    observe({
+    shiny::observe({
       
-      req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
+      shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
       for (i in 1:posteriorpredictive_loginputset$num) {
-        req(!is.null(posteriorpredictive_logfileset$file[[i]]))
+        shiny::req(!is.null(posteriorpredictive_logfileset$file[[i]]))
         sum <- 0
         
         for (j in 1:nrow(posteriorpredictive_logfileset$file[[i]])) {
-          req(!is.null(input[[paste0("posteriorpredictive_logfile", i, "_log", j, "_include")]]))
+          shiny::req(!is.null(input[[paste0("posteriorpredictive_logfile", i, "_log", j, "_include")]]))
           sum <- sum + input[[paste0("posteriorpredictive_logfile", i, "_log", j, "_include")]]
         }
         
         if (sum == 0) {
-          showModal(modalDialog(paste0("No log file is included for prior model ", i,
-                                       ". At least one log file needs to be included under each prior model."),
-                                title = "Invalid input",
-                                easyClose = F,
-                                size = "m"
+          shiny::showModal(modalDialog(paste0("No log file is included for prior model ", i,
+                                              ". At least one log file needs to be included under each prior model."),
+                                       title = "Invalid input",
+                                       easyClose = F,
+                                       size = "m"
           ))
           break
         }
       }
     })
     
-    observe({
+    shiny::observe({
       lapply(1:posteriorpredictive_loginputset$num, function(i) {
         shinyjs::runjs(HTML(paste0("$('#posteriorpredictive_logprocessing", i, "').on('shown.bs.collapse', function() {
                               $('#posteriorpredictive_logprocessing_panel", i, "').find('.glyphicon-chevron-down').addClass('glyphicon-chevron-up').removeClass('glyphicon-chevron-down');
@@ -6054,8 +6048,8 @@ run_app <- function() {
     
     output$posteriorpredictive_priormodelname_ui <- renderUI({
       
-      req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
-      posteriorpredictive_priormodelname_ui_list <- tagList()
+      shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
+      posteriorpredictive_priormodelname_ui_list <- shiny::tagList()
       
       for (i in 1:posteriorpredictive_loginputset$num) {
         if (!is.null(posteriorpredictive_logfileset$file[[i]])) {
@@ -6070,23 +6064,23 @@ run_app <- function() {
     })
     
     
-    posteriorpredictive_startprocessing_status <- reactiveValues(enabled = T, clicked = F)
-    observe({
+    posteriorpredictive_startprocessing_status <- shiny::reactiveValues(enabled = T, clicked = F)
+    shiny::observe({
       shinyjs::toggle(id = "posteriorpredictive_startprocessing", condition = posteriorpredictive_startprocessing_status$enabled)
     })
     
     # only enable the panel when all the input files are in place and valid
-    observe({
+    shiny::observe({
       shinyjs::toggleClass(selector = "#posteriorpredictive_input_tabs li a[data-value=startsimulations]", class = "divdisabled", 
                            condition = !posteriorpredictive_startprocessing_status$enabled)
     })
     
-    observe({
+    shiny::observe({
       shinyjs::toggleClass(id = "posteriorpredictive_simulatenumber_div", class = "divdisabled", 
                            condition = input$posteriorpredictive_simulateall)
     })
     
-    observe({
+    shiny::observe({
       
       posteriorpredictive_startprocessing_status$enabled <- T
       
@@ -6102,8 +6096,8 @@ run_app <- function() {
         
         posteriorpredictive_startprocessing_status$enabled <- F
       } else {
-        req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
-        req(posteriorpredictive_loginputset$num == length(posteriorpredictive_treefileset$file))
+        shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
+        shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_treefileset$file))
         
         for (i in 1:posteriorpredictive_loginputset$num) {
           if (is.null(posteriorpredictive_logfileset$file[[i]]) || is.null(posteriorpredictive_treefileset$file[[i]])) {
@@ -6122,18 +6116,18 @@ run_app <- function() {
       posteriorpredictive_startprocessing_status$clicked <- F
     })
     
-    observe({
+    shiny::observe({
       posteriorpredictive_tab2_disabled <- (input$posteriorpredictive_startprocessing == 0) || (!posteriorpredictive_startprocessing_status$clicked) ||
         is.null(posteriorpredictive_values$teststatistics_alldf_processed)
       
       shinyjs::toggleClass(selector = "#posteriorpredictive_tabs li a[data-value=processing_settings]", class = "divdisabled", 
                            condition = posteriorpredictive_tab2_disabled)
       if (!posteriorpredictive_tab2_disabled) {
-        updateNavlistPanel(session, inputId = "posteriorpredictive_tabs", selected = "processing_settings")
+        shiny::updateNavlistPanel(session, inputId = "posteriorpredictive_tabs", selected = "processing_settings")
       }
     })
     
-    observe({
+    shiny::observe({
       posteriorpredictive_tab3_disabled <- (input$posteriorpredictive_startprocessing == 0) || (!posteriorpredictive_startprocessing_status$clicked) ||
         is.null(posteriorpredictive_values$teststatistics_alldf_processed)
       
@@ -6141,33 +6135,33 @@ run_app <- function() {
                            condition = posteriorpredictive_tab3_disabled)
     })
     
-    observe({
+    shiny::observe({
       posteriorpredictive_tab2_disabled <- (input$posteriorpredictive_startprocessing == 0) || (!posteriorpredictive_startprocessing_status$clicked) || 
         is.null(posteriorpredictive_values$teststatistics_alldf_processed)
       shinyjs::toggle(id = "posteriorpredictive_result_div", condition = !posteriorpredictive_tab2_disabled)
     })
     
     
-    posteriorpredictive_values <- reactiveValues(teststatistics_alldf_raw = NULL, teststatistics_alldf_processed = NULL, simulateddata_tmppath = NULL)
-    observeEvent(input$posteriorpredictive_startprocessing, {
+    posteriorpredictive_values <- shiny::reactiveValues(teststatistics_alldf_raw = NULL, teststatistics_alldf_processed = NULL, simulateddata_tmppath = NULL)
+    shiny::observeEvent(input$posteriorpredictive_startprocessing, {
       
-      req(posteriorpredictive_states_dat())
-      req(input$posteriorpredictive_geographyfile_traitcolumn_name)
-      req(input$posteriorpredictive_geographyfile_taxoncolumn_name)
-      req(posteriorpredictive_input_condition$trait_invalid == F)
+      shiny::req(posteriorpredictive_states_dat())
+      shiny::req(input$posteriorpredictive_geographyfile_traitcolumn_name)
+      shiny::req(input$posteriorpredictive_geographyfile_taxoncolumn_name)
+      shiny::req(posteriorpredictive_input_condition$trait_invalid == F)
       
-      req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
-      req(posteriorpredictive_loginputset$num == length(posteriorpredictive_treefileset$file))
+      shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
+      shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_treefileset$file))
       for (i in 1:posteriorpredictive_loginputset$num) {
-        req(posteriorpredictive_logfileset$file[[i]])
-        req(posteriorpredictive_treefileset$file[[i]])
+        shiny::req(posteriorpredictive_logfileset$file[[i]])
+        shiny::req(posteriorpredictive_treefileset$file[[i]])
       }
       
-      req(posteriorpredictive_input_condition$tree_invalid == F)
-      req(posteriorpredictive_input_condition$log_invalid == F)
-      req(posteriorpredictive_tree_values$tree)
-      req(posteriorpredictive_input_condition$treetrait_invalid == F)
-      req(posteriorpredictive_input_condition$logtree_invalid == F)
+      shiny::req(posteriorpredictive_input_condition$tree_invalid == F)
+      shiny::req(posteriorpredictive_input_condition$log_invalid == F)
+      shiny::req(posteriorpredictive_tree_values$tree)
+      shiny::req(posteriorpredictive_input_condition$treetrait_invalid == F)
+      shiny::req(posteriorpredictive_input_condition$logtree_invalid == F)
       
       if (!is.null(posteriorpredictive_values$simulateddata_tmppath)) {
         file.remove(posteriorpredictive_values$simulateddata_tmppath)
@@ -6268,35 +6262,35 @@ run_app <- function() {
     })
     
     
-    observe({
+    shiny::observe({
       
-      req(posteriorpredictive_states_dat())
-      req(input$posteriorpredictive_geographyfile_traitcolumn_name)
-      req(input$posteriorpredictive_geographyfile_taxoncolumn_name)
-      req(posteriorpredictive_input_condition$trait_invalid == F)
+      shiny::req(posteriorpredictive_states_dat())
+      shiny::req(input$posteriorpredictive_geographyfile_traitcolumn_name)
+      shiny::req(input$posteriorpredictive_geographyfile_taxoncolumn_name)
+      shiny::req(posteriorpredictive_input_condition$trait_invalid == F)
       
-      req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
-      req(posteriorpredictive_loginputset$num == length(posteriorpredictive_treefileset$file))
+      shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
+      shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_treefileset$file))
       for (i in 1:posteriorpredictive_loginputset$num) {
-        req(posteriorpredictive_logfileset$file[[i]])
-        req(posteriorpredictive_treefileset$file[[i]])
+        shiny::req(posteriorpredictive_logfileset$file[[i]])
+        shiny::req(posteriorpredictive_treefileset$file[[i]])
       }
       
-      req(posteriorpredictive_input_condition$tree_invalid == F)
-      req(posteriorpredictive_input_condition$log_invalid == F)
-      req(posteriorpredictive_tree_values$tree)
-      req(posteriorpredictive_input_condition$treetrait_invalid == F)
-      req(posteriorpredictive_input_condition$logtree_invalid == F)
+      shiny::req(posteriorpredictive_input_condition$tree_invalid == F)
+      shiny::req(posteriorpredictive_input_condition$log_invalid == F)
+      shiny::req(posteriorpredictive_tree_values$tree)
+      shiny::req(posteriorpredictive_input_condition$treetrait_invalid == F)
+      shiny::req(posteriorpredictive_input_condition$logtree_invalid == F)
       
-      req(posteriorpredictive_values$teststatistics_alldf_raw)
-      req(length(posteriorpredictive_values$teststatistics_alldf_raw) == posteriorpredictive_loginputset$num)
+      shiny::req(posteriorpredictive_values$teststatistics_alldf_raw)
+      shiny::req(length(posteriorpredictive_values$teststatistics_alldf_raw) == posteriorpredictive_loginputset$num)
       
       teststatistics_alldf_raw <- posteriorpredictive_values$teststatistics_alldf_raw
       teststatistics_alldf_processed <- vector("list", length(teststatistics_alldf_raw))
       
       for (i in 1:posteriorpredictive_loginputset$num) {
         
-        req(length(teststatistics_alldf_raw[[i]]) == nrow(posteriorpredictive_logfileset$file[[i]]))
+        shiny::req(length(teststatistics_alldf_raw[[i]]) == nrow(posteriorpredictive_logfileset$file[[i]]))
         teststatistics_alldf <- teststatistics_alldf_raw[[i]]
         
         posterior_notinpowerposterior_exist <- prior_notinpowerposterior_exist <- F
@@ -6422,15 +6416,15 @@ run_app <- function() {
     $('#posteriorpredictive_yaxis_edits_panel').find('.glyphicon-chevron-up').addClass('glyphicon-chevron-down').removeClass('glyphicon-chevron-up');
   });")
     
-    observe({
-      req(input$posteriorpredictive_teststatistic)
+    shiny::observe({
+      shiny::req(input$posteriorpredictive_teststatistic)
       updateTextInput(session = session, inputId = "posteriorpredictive_plot_y_lab", value = paste(input$posteriorpredictive_teststatistic, "statistic"))
     })
     
     
-    observe({
-      req(posteriorpredictive_logfileset$file[[1]])
-      req(input$posteriorpredictive_teststatistic)
+    shiny::observe({
+      shiny::req(posteriorpredictive_logfileset$file[[1]])
+      shiny::req(input$posteriorpredictive_teststatistic)
       
       teststatistic <- switch(input$posteriorpredictive_teststatistic, "Parsimony" = "parsimonyScore", 
                               "Tip-wise multinomial" = "tipwiseMultinomialLikelihood")
@@ -6439,38 +6433,38 @@ run_app <- function() {
       updateTextInput(session = session, inputId = "posteriorpredictive_plot_downloadname", value = file_name)
     })
     
-    observe({
-      req(posteriorpredictive_values$teststatistics_alldf_processed)
+    shiny::observe({
+      shiny::req(posteriorpredictive_values$teststatistics_alldf_processed)
       shinyjs::runjs('Shiny.onInputChange("posteriorpredictive_plot_width", document.getElementById("posteriorpredictive_plot").offsetWidth);')
     })
     
     
-    observe({
+    shiny::observe({
       output$posteriorpredictive_plot <- renderPlot({
         
-        req(posteriorpredictive_states_dat())
-        req(input$posteriorpredictive_geographyfile_traitcolumn_name)
-        req(input$posteriorpredictive_geographyfile_taxoncolumn_name)
-        req(posteriorpredictive_input_condition$trait_invalid == F)
+        shiny::req(posteriorpredictive_states_dat())
+        shiny::req(input$posteriorpredictive_geographyfile_traitcolumn_name)
+        shiny::req(input$posteriorpredictive_geographyfile_taxoncolumn_name)
+        shiny::req(posteriorpredictive_input_condition$trait_invalid == F)
         
-        req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
-        req(posteriorpredictive_loginputset$num == length(posteriorpredictive_treefileset$file))
+        shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
+        shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_treefileset$file))
         for (i in 1:posteriorpredictive_loginputset$num) {
-          req(posteriorpredictive_logfileset$file[[i]])
-          req(posteriorpredictive_treefileset$file[[i]])
+          shiny::req(posteriorpredictive_logfileset$file[[i]])
+          shiny::req(posteriorpredictive_treefileset$file[[i]])
         }
-        req(posteriorpredictive_input_condition$tree_invalid == F)
-        req(posteriorpredictive_input_condition$log_invalid == F)
-        req(posteriorpredictive_tree_values$tree)
-        req(posteriorpredictive_input_condition$treetrait_invalid == F)
-        req(posteriorpredictive_input_condition$logtree_invalid == F)
+        shiny::req(posteriorpredictive_input_condition$tree_invalid == F)
+        shiny::req(posteriorpredictive_input_condition$log_invalid == F)
+        shiny::req(posteriorpredictive_tree_values$tree)
+        shiny::req(posteriorpredictive_input_condition$treetrait_invalid == F)
+        shiny::req(posteriorpredictive_input_condition$logtree_invalid == F)
         
-        req(posteriorpredictive_values$teststatistics_alldf_raw)
-        req(length(posteriorpredictive_values$teststatistics_alldf_raw) == posteriorpredictive_loginputset$num)
+        shiny::req(posteriorpredictive_values$teststatistics_alldf_raw)
+        shiny::req(length(posteriorpredictive_values$teststatistics_alldf_raw) == posteriorpredictive_loginputset$num)
         
-        req(posteriorpredictive_values$teststatistics_alldf_processed)
-        req(length(posteriorpredictive_values$teststatistics_alldf_processed) == posteriorpredictive_loginputset$num)
-        req(input$posteriorpredictive_teststatistic)
+        shiny::req(posteriorpredictive_values$teststatistics_alldf_processed)
+        shiny::req(length(posteriorpredictive_values$teststatistics_alldf_processed) == posteriorpredictive_loginputset$num)
+        shiny::req(input$posteriorpredictive_teststatistic)
         
         teststatistics_alldf_processed <- posteriorpredictive_values$teststatistics_alldf_processed
         
@@ -6742,29 +6736,29 @@ run_app <- function() {
     
     output$posteriorpredictive_table <- DT::renderDataTable({
       
-      req(posteriorpredictive_states_dat())
-      req(input$posteriorpredictive_geographyfile_traitcolumn_name)
-      req(input$posteriorpredictive_geographyfile_taxoncolumn_name)
-      req(posteriorpredictive_input_condition$trait_invalid == F)
+      shiny::req(posteriorpredictive_states_dat())
+      shiny::req(input$posteriorpredictive_geographyfile_traitcolumn_name)
+      shiny::req(input$posteriorpredictive_geographyfile_taxoncolumn_name)
+      shiny::req(posteriorpredictive_input_condition$trait_invalid == F)
       
-      req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
-      req(posteriorpredictive_loginputset$num == length(posteriorpredictive_treefileset$file))
+      shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_logfileset$file))
+      shiny::req(posteriorpredictive_loginputset$num == length(posteriorpredictive_treefileset$file))
       for (i in 1:posteriorpredictive_loginputset$num) {
-        req(posteriorpredictive_logfileset$file[[i]])
-        req(posteriorpredictive_treefileset$file[[i]])
+        shiny::req(posteriorpredictive_logfileset$file[[i]])
+        shiny::req(posteriorpredictive_treefileset$file[[i]])
       }
-      req(posteriorpredictive_input_condition$tree_invalid == F)
-      req(posteriorpredictive_input_condition$log_invalid == F)
-      req(posteriorpredictive_tree_values$tree)
-      req(posteriorpredictive_input_condition$treetrait_invalid == F)
-      req(posteriorpredictive_input_condition$logtree_invalid == F)
+      shiny::req(posteriorpredictive_input_condition$tree_invalid == F)
+      shiny::req(posteriorpredictive_input_condition$log_invalid == F)
+      shiny::req(posteriorpredictive_tree_values$tree)
+      shiny::req(posteriorpredictive_input_condition$treetrait_invalid == F)
+      shiny::req(posteriorpredictive_input_condition$logtree_invalid == F)
       
-      req(posteriorpredictive_values$teststatistics_alldf_raw)
-      req(length(posteriorpredictive_values$teststatistics_alldf_raw) == posteriorpredictive_loginputset$num)
+      shiny::req(posteriorpredictive_values$teststatistics_alldf_raw)
+      shiny::req(length(posteriorpredictive_values$teststatistics_alldf_raw) == posteriorpredictive_loginputset$num)
       
-      req(posteriorpredictive_values$teststatistics_alldf_processed)
-      req(length(posteriorpredictive_values$teststatistics_alldf_processed) == posteriorpredictive_loginputset$num)
-      req(input$posteriorpredictive_teststatistic)
+      shiny::req(posteriorpredictive_values$teststatistics_alldf_processed)
+      shiny::req(length(posteriorpredictive_values$teststatistics_alldf_processed) == posteriorpredictive_loginputset$num)
+      shiny::req(input$posteriorpredictive_teststatistic)
       
       teststatistics_alldf_processed <- posteriorpredictive_values$teststatistics_alldf_processed
       
@@ -6835,8 +6829,8 @@ run_app <- function() {
       teststatistics_df
     })
     
-    observe({
-      req(posteriorpredictive_logfileset$file[[1]])
+    shiny::observe({
+      shiny::req(posteriorpredictive_logfileset$file[[1]])
       
       file_name <- paste0(unlist(strsplit(posteriorpredictive_logfileset$file[[1]]$name[1], "_underprior|_posterior|_datacloning|_MLE"))[1], 
                           "_posteriorPredictive_pvalues")
@@ -6924,8 +6918,8 @@ run_app <- function() {
     )
     
     
-    observe({
-      req(posteriorpredictive_logfileset$file[[1]])
+    shiny::observe({
+      shiny::req(posteriorpredictive_logfileset$file[[1]])
       
       file_name <- paste0(unlist(strsplit(posteriorpredictive_logfileset$file[[1]]$name[1], "_underprior|_posterior|_datacloning|_MLE"))[1], 
                           "_simulatedDataset")
@@ -7063,11 +7057,10 @@ run_app <- function() {
       }
     )
     
-    
     outputOptions(output, "posteriorpredictive_logprocessing_ui", suspendWhenHidden = F)
     outputOptions(output, "posteriorpredictive_priormodelname_ui", suspendWhenHidden = F)
   }
   
   # Create Shiny app ----
-  shinyApp(ui = ui, server = server)
+  shiny::shinyApp(ui = ui, server = server)
 }
