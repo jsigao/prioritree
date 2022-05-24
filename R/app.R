@@ -17,6 +17,9 @@ run_app <- function() {
     shiny::tags$link(rel = "stylesheet", type = "text/css", href = "www/prism-okaidia.css")
   )
   
+  methods_template_height <- 200
+  xml_viewer_height <- 400
+  
   # Define UI for app
   ui <- shiny::fluidPage(
     
@@ -27,7 +30,7 @@ run_app <- function() {
     shiny::tags$style(type = 'text/css', ".nav-tabs {font-size: 90%;}"),
     shiny::tags$style(type = 'text/css', ".nav-pills {font-size: 85%;}"),
     
-    shiny::tags$script(HTML("MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$']]}});"), type = "text/x-mathjax-config"),
+    shiny::tags$script(shiny::HTML("MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$']]}});"), type = "text/x-mathjax-config"),
     
     shiny::navbarPage(title = "PrioriTree", id = "main_menu",
                       
@@ -242,35 +245,35 @@ run_app <- function() {
                                                                                                
                                                                                                shiny::tabPanel(title = "Data", value = "data",
                                                                                                                shiny::h6(""),
-                                                                                                               shiny::fluidRow(style = "height:200px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;",
+                                                                                                               shiny::fluidRow(style = paste0("height:", methods_template_height, "px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;"),
                                                                                                                                shiny::uiOutput("methods_data")
                                                                                                                )
                                                                                                ),
                                                                                                
                                                                                                shiny::tabPanel(title = "Model", value = "model",
                                                                                                                shiny::h6(""),
-                                                                                                               shiny::fluidRow(style = "height:200px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;",
+                                                                                                               shiny::fluidRow(style = paste0("height:", methods_template_height, "px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;"),
                                                                                                                                shiny::uiOutput("methods_model")
                                                                                                                )
                                                                                                ),
                                                                                                
                                                                                                shiny::tabPanel(title = "Bayesian Inference (Prior)", value = "prior",
                                                                                                                shiny::h6(""),
-                                                                                                               shiny::fluidRow(style = "height:200px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;",
+                                                                                                               shiny::fluidRow(style = paste0("height:", methods_template_height, "px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;"),
                                                                                                                                shiny::uiOutput("methods_prior")
                                                                                                                )
                                                                                                ),
                                                                                                
                                                                                                shiny::tabPanel(title = "Analysis", value = "analysis",
                                                                                                                shiny::h6(""),
-                                                                                                               shiny::fluidRow(style = "height:200px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;",
+                                                                                                               shiny::fluidRow(style = paste0("height:", methods_template_height, "px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;"),
                                                                                                                                shiny::uiOutput("methods_analysis")
                                                                                                                )
                                                                                                ),
                                                                                                
                                                                                                shiny::tabPanel(title = "Full", value = "full",
                                                                                                                shiny::h6(""),
-                                                                                                               shiny::fluidRow(style = "height:200px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;",
+                                                                                                               shiny::fluidRow(style = paste0("height:", methods_template_height, "px; overflow: auto; background-color: #F4F6F6; padding: 2px 10px 5px 10px;"),
                                                                                                                                shiny::uiOutput("methods_full")
                                                                                                                )
                                                                                                )
@@ -289,49 +292,49 @@ run_app <- function() {
                                                                                                
                                                                                                shiny::tabPanel(title = "Data", value = "xmldata",
                                                                                                                shiny::h6(""),
-                                                                                                               shiny::fluidRow(style = "height: 200px; overflow: auto;",
+                                                                                                               shiny::fluidRow(style = paste0("height:", xml_viewer_height, "px; overflow: auto;"),
                                                                                                                                shiny::uiOutput("beastxml_data")
                                                                                                                )
                                                                                                ),
                                                                                                
                                                                                                shiny::tabPanel(title = "Model and Prior", value = "xmlmodelprior",
                                                                                                                shiny::h6(""),
-                                                                                                               shiny::fluidRow(style = "height: 200px; overflow: auto;",
+                                                                                                               shiny::fluidRow(style = paste0("height: ", xml_viewer_height, "px; overflow: auto;"),
                                                                                                                                shiny::uiOutput("beastxml_modelprior")
                                                                                                                )
                                                                                                ),
                                                                                                
                                                                                                shiny::tabPanel(title = "MCMC Sampling", value = "xmlmcmc",
                                                                                                                shiny::h6(""),
-                                                                                                               shiny::fluidRow(style = "height: 200px; overflow: auto;",
+                                                                                                               shiny::fluidRow(style = paste0("height: ", xml_viewer_height, "px; overflow: auto;"),
                                                                                                                                shiny::uiOutput("beastxml_mcmc")
                                                                                                                )
                                                                                                ),
                                                                                                
                                                                                                shiny::tabPanel(title = "Proposal", value = "xmlproposal",
                                                                                                                shiny::h6(""),
-                                                                                                               shiny::fluidRow(style = "height: 200px; overflow: auto;",
+                                                                                                               shiny::fluidRow(style = paste0("height: ", xml_viewer_height, "px; overflow: auto;"),
                                                                                                                                shiny::uiOutput("beastxml_proposal")
                                                                                                                )
                                                                                                ),
                                                                                                
                                                                                                shiny::tabPanel(title = "Phylogenetic Likelihood and Stochastic Mapping", value = "xmlphyloctmc",
                                                                                                                shiny::h6(""),
-                                                                                                               shiny::fluidRow(style = "height: 200px; overflow: auto;",
+                                                                                                               shiny::fluidRow(style = paste0("height: ", xml_viewer_height, "px; overflow: auto;"),
                                                                                                                                shiny::uiOutput("beastxml_phyloctmc")
                                                                                                                )
                                                                                                ),
                                                                                                
                                                                                                shiny::tabPanel(title = "Marginal Likelihood Estimation", value = "xmlpowerposterior",
                                                                                                                shiny::h6(""),
-                                                                                                               shiny::fluidRow(style = "height: 200px; overflow: auto;",
+                                                                                                               shiny::fluidRow(style = paste0("height: ", xml_viewer_height, "px; overflow: auto;"),
                                                                                                                                shiny::uiOutput("beastxml_powerposterior")
                                                                                                                )
                                                                                                ),
                                                                                                
                                                                                                shiny::tabPanel(title = "Full", value = "xmlfull",
                                                                                                                shiny::h6(""),
-                                                                                                               shiny::fluidRow(style = "height: 200px; overflow: auto;",
+                                                                                                               shiny::fluidRow(style = paste0("height: ", xml_viewer_height, "px; overflow: auto;"),
                                                                                                                                shiny::uiOutput("beastxml_full")
                                                                                                                )
                                                                                                )
@@ -458,7 +461,7 @@ run_app <- function() {
                                                                                         shiny::tabsetPanel(type = "tabs", id = "focalparamsummary_result_tabs",
                                                                                                            
                                                                                                            shiny::tabPanel(title = "Figure", value = "figure",
-                                                                                                                           plotOutput(outputId = "focalparamsummary_plot", height = "auto")
+                                                                                                                           shiny::plotOutput(outputId = "focalparamsummary_plot", height = "auto")
                                                                                                            ),
                                                                                                            
                                                                                                            shiny::tabPanel(title = "Table", value = "table",
@@ -582,7 +585,7 @@ run_app <- function() {
                                                                                         shiny::tabsetPanel(type = "tabs", id = "focalparam2summary_result_tabs",
                                                                                                            
                                                                                                            shiny::tabPanel(title = "Figure", value = "figure",
-                                                                                                                           plotOutput(outputId = "focalparam2summary_plot", height = "auto")
+                                                                                                                           shiny::plotOutput(outputId = "focalparam2summary_plot", height = "auto")
                                                                                                            ),
                                                                                                            
                                                                                                            shiny::tabPanel(title = "Table", value = "table",
@@ -756,7 +759,7 @@ run_app <- function() {
                                                                                         shiny::tabsetPanel(type = "tabs", id = "posteriorpredictive_result_tabs",
                                                                                                            
                                                                                                            shiny::tabPanel(title = "Figure", value = "figure",
-                                                                                                                           plotOutput(outputId = "posteriorpredictive_plot", height = "auto")
+                                                                                                                           shiny::plotOutput(outputId = "posteriorpredictive_plot", height = "auto")
                                                                                                            ),
                                                                                                            
                                                                                                            shiny::tabPanel(title = "Table", value = "table",
@@ -1361,7 +1364,7 @@ run_app <- function() {
                                                      numericInput(inputId = "ml_samplingfreq", label = "Sampling frequency of the power posterior chains", value = 5000, min = 1),
                                                      numericInput(inputId = "ml_numstones", label = "Number of power posterior steps", value = 100, min = 1),
                                                      numericInput(inputId = "ml_alphaofbeta", label = "Alpha of the Beta distribution", value = 0.3, min = 0),
-                                                     plotOutput(outputId = "powerbeta_plot", width = "100%", height = 100))
+                                                     shiny::plotOutput(outputId = "powerbeta_plot", width = "100%", height = 100))
       }
       
       furtheranalysis_ui_list
@@ -3125,7 +3128,7 @@ run_app <- function() {
         plot_height <- 450 # for mu prior, there would be two plots vertically stacked, so larger height
       }
       
-      plotOutput(outputId = "prior_plot", width = "100%", height = plot_height)
+      shiny::plotOutput(outputId = "prior_plot", width = "100%", height = plot_height)
     })
     
     # store some computational expensive hierachical exponential prior plotting settings
