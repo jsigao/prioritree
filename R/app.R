@@ -1591,7 +1591,7 @@ run_app <- function() {
         taxa <- sort(as.vector(states_dat()[, input$taxoncolumn_name]))
         
         if (!identical(tip_lab, taxa)) {
-          shiny::showModal(modalDialog("Taxa list in the tree file doesn't match the discrete-geography file.",
+          shiny::showModal(modalDialog("Taxa in the tree file don't match taxa in the discrete-geography file.",
                                        title = "Invalid input",
                                        easyClose = F,
                                        size = "m"
@@ -1967,7 +1967,7 @@ run_app <- function() {
       shiny::req(input$delta_prior)
       
       if (input$delta_prior == "Poisson" && (!is.null(input$poisson_default)) && (input$poisson_default)) {
-        shiny::showModal(modalDialog(paste0("Note that this prior is not recommended since it expresses an explicit and very informative preference for biogeographic models with the minimal number of dispersal routes. ",
+        shiny::showModal(modalDialog(paste0("Note that this prior is not recommended because it implies a very informative preference for biogeographic models with the minimal number of dispersal routes. ",
                                             "For more details, see Gao et al. 2021."),
                                      title = "Warning: unrecommended option",
                                      easyClose = F,
@@ -3096,8 +3096,8 @@ run_app <- function() {
           v <- input$alphaofgamma_mumean
         }
         
-        math_tex <- c(math_tex, paste0("$$\\theta \\sim Gamma(", v, ", ", v, ")$$"))
-        math_tex <- c(math_tex, paste0("$$\\mu \\sim Exp(\\frac{1}{\\theta})$$"))
+        math_tex <- c(math_tex, paste0("$$\\frac{1}{\\theta} \\sim Gamma(", v, ", ", v, ")$$"))
+        math_tex <- c(math_tex, paste0("$$\\mu \\sim Exp(\\theta)$$"))
         
       } else if (input$mu_prior == "Empirical-Informed Exponential") {
         

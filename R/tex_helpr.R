@@ -71,11 +71,11 @@ description_deltaprior <- function(states_num, symmetry = T, delta_prior = c("Po
     
   } else if (delta_prior == "Beta-Binomial") {
     
-    prior_dist <- "is a Binomial distribution " 
+    prior_dist <- "is a Beta-Binomial distribution " 
     prior_mean95interval <- paste0("(prior mean = ", formatC(alpha_beta / (alpha_beta + beta_beta) * delta_max, digits = 2, format = "fg"), "; $95\\%$ prior interval = ${[", 
                                    paste(rmutil::qbetabinom(c(0.025, 0.975), size = delta_max, m = alpha_beta / (alpha_beta + beta_beta), s = alpha_beta + beta_beta), collapse = ", "), "]}$")
     
-    pprior_dist <- paste0("<br><br>The success probability ($\\textit{i.e.}$, the probability that each dispersal route exists), $p$, of the Binomial distribution is treated as a random variable to be estimated from the data;", 
+    pprior_dist <- paste0("<br><br>The number of dispersal routes follows a Binomial distribution with $n$ trials (corresponding to the total number of possible dispersal routes), each of which is a success ($\\textit{i.e.}$, the dispersal route exists) with probability $p$. The success probability is treated as a random variable to be estimated from the data;", 
                           " the prior on $p$ is a Beta distribution with the first shape parameter = ", alpha_beta, ", and the second shape parameter = ", beta_beta)
     pprior_mean95interval <- paste0(" (prior mean = ", formatC(alpha_beta / (alpha_beta + beta_beta), digits = 2, format = "fg"), "; $95\\%$ prior interval = ${[", 
                                     paste(formatC(qbeta(c(0.025, 0.975), alpha_beta, beta_beta), digits = 2, format = "fg"), collapse = ", "), "]}$).")
@@ -175,7 +175,7 @@ tex_data <- function(taxa_num = 1, states_num = 1, format = "HTML") {
   
   format_idx <- which(.pkg_env$tex_helprs$all_format == format)
   data_title <- paste0(.pkg_env$tex_helprs$section_wrapper[[format_idx]][1], "Data", .pkg_env$tex_helprs$section_wrapper[[format_idx]][2])
-  data_body <- paste0("Our dataset contains ", taxa_num, " sequences, each of which was sampled in one of the ", 
+  data_body <- paste0("Our dataset consists of ", taxa_num, " sequences, each of which was sampled in one of ", 
                       states_num, " geographic areas.")
   return(paste0(data_title, data_body, .pkg_env$tex_helprs$section_ending[format_idx]))
 }
@@ -376,7 +376,7 @@ tex_bayesianinference <- function(empiricaltree_mh = T, tree_num = 1, bssvs = T,
                               "$\\mu$ is the average rate of dispersal, ", "$G$ is the observed geographic data, ", "and $\\Psi$ is the phylogeny.\n")
   bayes_title <- paste0(.pkg_env$tex_helprs$section_wrapper[[format_idx]][1], "Bayesian Inference", .pkg_env$tex_helprs$section_wrapper[[format_idx]][2])
 
-  bayesian_inference <- paste0(bayes_title, "We estimate the parameters of these biogeographic models in a Bayesian framework.\n",
+  bayesian_inference <- paste0(bayes_title, "We estimate the parameters of this biogeographic model in a Bayesian framework.\n",
                                "Following Bayes' theorem, the joint posterior probability distribution of the model parameters is ",
                                ifelse(render_citation, paste0(.pkg_env$tex_helprs$citep_wrapper[[format_idx]][1], "Bayes1763", .pkg_env$tex_helprs$citep_wrapper[[format_idx]][2]), "(Bayes 1763)"),
                                ":\n", bayes_eq, bayes_explanation)
@@ -386,15 +386,15 @@ tex_bayesianinference <- function(empiricaltree_mh = T, tree_num = 1, bssvs = T,
                         "(", .pkg_env$tex_helprs$italic_wrapper[[format_idx]][1], "i.e.", .pkg_env$tex_helprs$italic_wrapper[[format_idx]][2], 
                         ", without incorporating the geographic data).\n")
   } else if (tree_num > 1) {
-    tree_dist <- paste0("Specifically, $\\Psi$ is a distribution of phylogenies that has been estimated using the sequence data ",
+    tree_dist <- paste0("Specifically, $P(\\Psi)$ is a sample of phylogenies that has been estimated using the sequence data ",
                         "(", .pkg_env$tex_helprs$italic_wrapper[[format_idx]][1], "i.e.", .pkg_env$tex_helprs$italic_wrapper[[format_idx]][2], 
                         ", without incorporating the geographic data).\n")
     if (empiricaltree_mh) {
-      tree_proposal <- paste0("Here we use $\\Psi$ as a prior to estimate the joint posterior distribution of the geographic model parameters.\n",
-                              "This ''sequential'' inference approach is theoretically equivalent to infer the tree and geographic model parameters ",
+      tree_proposal <- paste0("Here we use $P(\\Psi)$ as a prior to estimate the joint posterior distribution of the geographic model parameters.\n",
+                              "This ''sequential'' inference approach is theoretically equivalent to inferring the tree and geographic model parameters ",
                               "jointly with both the sequence data and the geographic data.\n")
     } else {
-      tree_proposal <- paste0("Here we average over $\\Psi$ by randomly proposing a new tree from it and ",
+      tree_proposal <- paste0("Here we average over $P(\\Psi)$ by randomly proposing a new tree from it and ",
                               "always accepting the proposed tree without evaluating the acceptance ratio ",
                               "(in contrast to the other proposals in the Metropolis-Hastings MCMC algorithm), ",
                               "effectively assuming that, given a set of geographic model parameter values, ",
@@ -412,12 +412,12 @@ tex_posterioranalysis <- function(mcmc_chainlength = 1, mcmc_samplingfreq = 1, m
   
   format_idx <- which(.pkg_env$tex_helprs$all_format == format)
   postrior_title <- paste0(.pkg_env$tex_helprs$subsection_wrapper[[format_idx]][1], "Estimating the Joint Posterior Distribution of Geographic Model Parameters", .pkg_env$tex_helprs$subsection_wrapper[[format_idx]][2])
-  posterior_body <- paste0("We approximate the joint posterior distribution using Markov chain Monte Carlo in ", 
+  posterior_body <- paste0("We approximated the joint posterior distribution using Markov chain Monte Carlo in ", 
                            .pkg_env$tex_helprs$texttt_wrapper[[format_idx]][1], "BEAST", .pkg_env$tex_helprs$texttt_wrapper[[format_idx]][2], ", ",
                            "running it for ", mcmc_chainlength, " generations and sampling every ",
                            mcmc_samplingfreq, " generations throughout the chain.\n")
   if (mcmc_numreplicates > 1) {
-    posterior_body <- paste0(posterior_body, "We run ",  mcmc_numreplicates, 
+    posterior_body <- paste0(posterior_body, "We ran ",  mcmc_numreplicates, 
                              " independent MCMC chains to assess the convergence among replicates.\n")
   }
 
@@ -486,7 +486,7 @@ tex_powerposterior <- function(ml_numstones = 0, ml_chainlengthperstone = 0, ml_
                                 "Here we use ", ml_numstones, " stones, running independent MCMC at each stone for ", ml_chainlengthperstone, " generations and sampling every ",
                                 ml_samplingfreq, " generations to approximate the power-posterior distributions.\n")
   if (mcmc_numreplicates > 1) {
-    powerposterior_body <- paste0(powerposterior_body, "We run ",  mcmc_numreplicates, 
+    powerposterior_body <- paste0(powerposterior_body, "We ran ",  mcmc_numreplicates, 
                                   " independent analysis replicates to assess the convergence of marginal likelihood estimates.\n")
   }
 
@@ -499,13 +499,13 @@ tex_prioranalysis <- function(mcmc_chainlength = 1, mcmc_samplingfreq = 1, mcmc_
   
   format_idx <- which(.pkg_env$tex_helprs$all_format == format)
   prior_title <- paste0(.pkg_env$tex_helprs$subsection_wrapper[[format_idx]][1], "Estimating the Joint Prior distribution of Geographic model parameters", .pkg_env$tex_helprs$subsection_wrapper[[format_idx]][2])
-  prior_body <- paste0("We approximate the joint prior distribution using Markov chain Monte Carlo in ", 
+  prior_body <- paste0("We approximated the joint prior distribution using Markov chain Monte Carlo in ", 
                        .pkg_env$tex_helprs$texttt_wrapper[[format_idx]][1], "BEAST", .pkg_env$tex_helprs$texttt_wrapper[[format_idx]][2], " ",
                        "(by setting all the geographic state to ``?'' in the XML script), ",
                        "running it for ", mcmc_chainlength, " generations and sampling every ",
                        mcmc_samplingfreq, " generations throughout the chain.\n")
   if (mcmc_numreplicates > 1) {
-    prior_body <- paste0(prior_body, "We run ",  mcmc_numreplicates,
+    prior_body <- paste0(prior_body, "We ran ",  mcmc_numreplicates,
                          " independent MCMC chains to assess the convergence among replicates.\n")
   }
   
@@ -538,13 +538,13 @@ tex_dcanalysis <- function(lheat = 1, mcmc_chainlength = 1, mcmc_samplingfreq = 
                     " copies (effectively raising the likelihood to the power of ", lheat_str, ")", 
                     ifelse(length(lheat > 1), ", respectively,", ""), " to see how the parameter estimates change as the likelihood increasingly dominates the posterior.\n")
   
-  dc_body <- paste0(dc_body, "We approximate this joint power posterior distribution using Markov chain Monte Carlo in ", 
+  dc_body <- paste0(dc_body, "We approximated this joint power posterior distribution using Markov chain Monte Carlo in ", 
                     .pkg_env$tex_helprs$texttt_wrapper[[format_idx]][1], "BEAST", .pkg_env$tex_helprs$texttt_wrapper[[format_idx]][2], " ",
                     "running it for ", mcmc_chainlength, " generations and sampling every ",
                     mcmc_samplingfreq, " generations throughout the chain.\n")
   
   if (mcmc_numreplicates > 1) {
-    dc_body <- paste0(dc_body, "We run ",  mcmc_numreplicates,
+    dc_body <- paste0(dc_body, "We ran ",  mcmc_numreplicates,
                       " independent MCMC chains to assess the convergence among replicates.\n")
   }
   
