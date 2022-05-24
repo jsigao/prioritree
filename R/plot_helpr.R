@@ -1,9 +1,3 @@
-
-# customize colors
-mycolorpalette <<- c("#46a2f2", "#ff7f00", RColorBrewer::brewer.pal(9, "Set1")[c(1, 3:4, 6:8)], 
-                     RColorBrewer::brewer.pal(7, "Dark2")[c(1:4, 6:7)], "darkgreen", "darkred", "darkcyan", "wheat4", 
-                     "darksalmon", "#5874c6", "#d3436c", "#457956", "#d54c35", "orange3", "blue4")
-
 #' @param value_list list where each element is a vector of values to plot
 #' @param value_anchor true values
 multigroup_boxplot <- function(value_list, value_anchor = NULL, anchor_col = "black", group_at = NULL, rep_id = NULL, boxgroup_gap = 0.5, boxset_gap = 0.5,

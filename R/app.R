@@ -20,6 +20,8 @@ run_app <- function() {
   methods_template_height <- 200
   xml_viewer_height <- 400
   
+  mycolorpalette <- .pkg_env$mycolorpalette
+  
   # Define UI for app
   ui <- shiny::fluidPage(
     
