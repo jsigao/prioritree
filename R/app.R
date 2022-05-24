@@ -3557,7 +3557,7 @@ run_app <- function() {
                                                                                    "\" class = \"panel-heading\"><p class=\"panel-title\" style=\"font-size: 95%; font-weight: bold;\">", 
                                                                                    "<a data-toggle=\"collapse\" href=\"#focalparamsummary_logprocessing", i,
                                                                                    "\"><span class=\"glyphicon glyphicon-chevron-up\" aria-hidden=\"true\"></span>", 
-                                                                                   "Settings for estimate log file(s) under prior model No. ", i, 
+                                                                                   "Settings for prior model No. ", i, 
                                                                                    "</a></p></div>")),
                                                                        shiny::div(id = paste0("focalparamsummary_logprocessing", i), 
                                                                                   class = "panel-collapse collapse in", 
@@ -3853,7 +3853,7 @@ run_app <- function() {
         
         for (j in 1:nrow(focalparamsummary_logfileset$file[[i]])) {
           
-          progress$inc(1 / lognum_all, detail = paste0("Processing estimate log file No.", j , " under prior model No.", i))
+          progress$inc(1 / lognum_all, detail = paste0("Processing log file No.", j , " under prior model No.", i))
           
           col_names <- colnames(read.table(focalparamsummary_logfileset$file[[i]]$datapath[j], header = T, sep = "\t", nrows = 1, stringsAsFactors = F, check.names = F))
           
@@ -4703,7 +4703,7 @@ run_app <- function() {
                                                                                     "\" class = \"panel-heading\"><p class=\"panel-title\" style=\"font-size: 95%; font-weight: bold;\">", 
                                                                                     "<a data-toggle=\"collapse\" href=\"#focalparam2summary_logprocessing", i,
                                                                                     "\"><span class=\"glyphicon glyphicon-chevron-up\" aria-hidden=\"true\"></span>", 
-                                                                                    "Settings for estimate log file(s) under prior model No. ", i, 
+                                                                                    "Settings for prior model No. ", i, 
                                                                                     "</a></p></div>")),
                                                                         shiny::div(id = paste0("focalparam2summary_logprocessing", i), 
                                                                                    class = "panel-collapse collapse in", 
@@ -4985,7 +4985,7 @@ run_app <- function() {
         
         for (j in 1:nrow(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]])) {
           
-          progress$inc(1/lognum_all, detail = paste0("Processing estimate log file No.", j , " under prior model No.", i))
+          progress$inc(1/lognum_all, detail = paste0("Processing log file No.", j , " under prior model No.", i))
           
           col_names <- colnames(read.table(input_processed$focalparam2summary_logfile[[paste0("focalparam2summary_logfile", i)]]$datapath[j], header = T, sep = "\t", nrows = 1, stringsAsFactors = F, check.names = F))
           
@@ -5987,7 +5987,7 @@ run_app <- function() {
                                                                                      "\" class = \"panel-heading\"><p class=\"panel-title\" style=\"font-size: 95%; font-weight: bold;\">", 
                                                                                      "<a data-toggle=\"collapse\" href=\"#posteriorpredictive_logprocessing", i,
                                                                                      "\"><span class=\"glyphicon glyphicon-chevron-up\" aria-hidden=\"true\"></span>", 
-                                                                                     "Settings for estimate log file(s) under prior model No. ", i, 
+                                                                                     "Settings for prior model No. ", i, 
                                                                                      "</a></p></div>")),
                                                                          shiny::div(id = paste0("posteriorpredictive_logprocessing", i), 
                                                                                     class = "panel-collapse collapse in", 
