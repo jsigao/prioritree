@@ -6,7 +6,7 @@ sim.history2 <- function (tree, Q, anc = NULL, nsim = 1, ...)
   if (hasArg(message)) 
     message <- list(...)$message
   else message <- TRUE
-  tree <- reorder.phylo(tree, "cladewise")
+  tree <- ape::reorder.phylo(tree, "cladewise")
   if (!isSymmetric(Q)) 
     if (message) 
       cat("Note - the rate of substitution from i->j should be given by Q[j,i].\n")
@@ -36,12 +36,11 @@ sim.history2 <- function (tree, Q, anc = NULL, nsim = 1, ...)
     anc <- anc/sum(anc)
   }
   for (i in 1:nsim) {
-    a <- rstate(anc)
+    a <- phytools::rstate(anc)
     mtree <- tree
     mtree$maps <- vector(mode = "list", length = nrow(tree$edge))
     node.states <- matrix(NA, nrow(tree$edge), ncol(tree$edge))
-    node.states[which(tree$edge[, 1] == (length(tree$tip) + 
-                                           1)), 1] <- a
+    node.states[which(tree$edge[, 1] == (length(tree$tip) + 1)), 1] <- a
     for (j in 1:nrow(tree$edge)) {
       if (tree$edge.length[j] == 0) {
         map <- vector()
@@ -67,7 +66,7 @@ sim.history2 <- function (tree, Q, anc = NULL, nsim = 1, ...)
             dt[2] <- dt[1] + rexp(n = 1, rate = -Q[state, state])
           }
           
-          if (dt[2] < tree$edge.length[j]) new.state <- rstate(Q[, state][-match(state, rownames(Q))]/sum(Q[, state][-match(state, rownames(Q))]))
+          if (dt[2] < tree$edge.length[j]) new.state <- phytools::rstate(Q[, state][-match(state, rownames(Q))]/sum(Q[, state][-match(state, rownames(Q))]))
           dt[2] <- min(dt[2], tree$edge.length[j])
           map[k] <- dt[2] - dt[1]
           names(map)[k] <- state
@@ -89,8 +88,7 @@ sim.history2 <- function (tree, Q, anc = NULL, nsim = 1, ...)
     allstates <- unique(allstates)
     mtree$mapped.edge <- matrix(data = 0, length(mtree$edge.length), 
                                 length(allstates), dimnames = list(apply(mtree$edge, 1, function(x) paste(x, collapse = ",")), state = allstates))
-    for (j in 1:length(mtree$maps)) for (k in 1:length(mtree$maps[[j]])) mtree$mapped.edge[j, 
-                                                                                           names(mtree$maps[[j]])[k]] <- mtree$mapped.edge[j, names(mtree$maps[[j]])[k]] + mtree$maps[[j]][k]
+    for (j in 1:length(mtree$maps)) for (k in 1:length(mtree$maps[[j]])) mtree$mapped.edge[j, names(mtree$maps[[j]])[k]] <- mtree$mapped.edge[j, names(mtree$maps[[j]])[k]] + mtree$maps[[j]][k]
     class(mtree) <- c("simmap", setdiff(class(mtree), "simmap"))
     mtrees[[i]] <- mtree
   }

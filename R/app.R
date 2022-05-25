@@ -2863,7 +2863,7 @@ run_app <- function() {
           writeLines(paste0(tex_begin, full_text$tex, tex_end), tex_tmppath)
           file.rename(tex_tmppath, paste0(input$methods_name, ".tex"))
           
-          zip(zipfile = file, files = c("literature.bib", paste0(input$methods_name, ".tex")), flags = "-j")
+          zip(zipfile = file, files = c(literature_bib_path, paste0(input$methods_name, ".tex")), flags = "-j")
           file.remove(paste0(input$methods_name, ".tex"))
           
         } else if (input$downloadmethods_format == "HTML") {
@@ -2912,7 +2912,7 @@ run_app <- function() {
           writeLines(paste0(tex_begin, full_text$tex, tex_end), tex_tmppath)
           file.rename(tex_tmppath, paste0(input$methods_name, ".tex"))
           
-          zip(zipfile = file, files = c("literature.bib", paste0(input$methods_name, ".tex")), flags = "-j")
+          zip(zipfile = file, files = c(literature_bib_path, paste0(input$methods_name, ".tex")), flags = "-j")
           file.remove(paste0(input$methods_name, ".tex"))
           
         } else if (input$downloadmethods_format == "HTML") {
@@ -4174,7 +4174,7 @@ run_app <- function() {
         }
         
         axis_log <- NULL
-        if ((all(unlist(value_list)) > 0) && (!is.null(input$focalparamsummary_plot_yaxis_log)) && input$focalparamsummary_plot_yaxis_log) axis_log <- "y"
+        if (all(unlist(value_list) > 0) && (!is.null(input$focalparamsummary_plot_yaxis_log)) && input$focalparamsummary_plot_yaxis_log) axis_log <- "y"
         
         xaxis_lab_cex <- 1.35
         if (!is.null(input$focalparamsummary_plot_xaxis_lab_cex)) xaxis_lab_cex <- input$focalparamsummary_plot_xaxis_lab_cex
@@ -4327,7 +4327,7 @@ run_app <- function() {
         }
         
         axis_log <- NULL
-        if ((all(unlist(value_list)) > 0) && (!is.null(input$focalparamsummary_plot_yaxis_log)) && input$focalparamsummary_plot_yaxis_log) axis_log <- "y"
+        if (all(unlist(value_list) > 0) && (!is.null(input$focalparamsummary_plot_yaxis_log)) && input$focalparamsummary_plot_yaxis_log) axis_log <- "y"
         
         xaxis_lab_cex <- 1.35
         if (!is.null(input$focalparamsummary_plot_xaxis_lab_cex)) xaxis_lab_cex <- input$focalparamsummary_plot_xaxis_lab_cex
@@ -5286,7 +5286,7 @@ run_app <- function() {
         }
         
         axis_log <- NULL
-        if ((all(unlist(value_list)) > 0) && (!is.null(input$focalparam2summary_plot_yaxis_log)) && input$focalparam2summary_plot_yaxis_log) axis_log <- "y"
+        if (all(unlist(value_list) > 0) && (!is.null(input$focalparam2summary_plot_yaxis_log)) && input$focalparam2summary_plot_yaxis_log) axis_log <- "y"
         
         xaxis_lab_cex <- 1.35
         if (!is.null(input$focalparam2summary_plot_xaxis_lab_cex)) xaxis_lab_cex <- input$focalparam2summary_plot_xaxis_lab_cex
@@ -5415,7 +5415,7 @@ run_app <- function() {
         }
         
         axis_log <- NULL
-        if ((all(unlist(value_list)) > 0) && (!is.null(input$focalparam2summary_plot_yaxis_log)) && input$focalparam2summary_plot_yaxis_log) axis_log <- "y"
+        if (all(unlist(value_list) > 0) && (!is.null(input$focalparam2summary_plot_yaxis_log)) && input$focalparam2summary_plot_yaxis_log) axis_log <- "y"
         
         xaxis_lab_cex <- 1.35
         if (!is.null(input$focalparam2summary_plot_xaxis_lab_cex)) xaxis_lab_cex <- input$focalparam2summary_plot_xaxis_lab_cex

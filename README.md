@@ -1,5 +1,5 @@
 # PrioriTree: A Tool For Specifying Priors and Exploring Prior Sensitivity of Discrete-Biogeographic Analyses using BEAST
-An interactive web utility (https://jsigao.shinyapps.io/prioritree/) designed to help researchers specify priors in input files for---and process output files from---analyses of discrete biogeographic history performed using the `BEAST`.
+An interactive web utility (https://jsigao.shinyapps.io/prioritree/) to help researchers specify priors in input files for---and process output files from---analyses of discrete biogeographic history performed using the `BEAST`.
 
 ## Installation
 To install the stable version from CRAN:

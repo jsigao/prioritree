@@ -1,5 +1,5 @@
 # PrioriTree: Setting up BEAST Discrete-Biogeographic Analyses with Visualized Priors and Assessing Their Impact
-An interactive tool to help researchers set up `BEAST` phylodynamic analyses to infer biogeographic history (focussed on prior specification and evaluation).
+An interactive web utility to help researchers specify priors in input files for---and process output files from---analyses of discrete biogeographic history performed using the `BEAST`.
 
 ## Manual
 A manual of `PrioriTree` can be found at https://bookdown.org/jsigao/PrioriTree_manual/.
@@ -10,7 +10,7 @@ PrioriTree is developed and maintained by [Jiansi Gao](mailto:jsigao@ucdavis.edu
 
 The recommended citation for the current version of `PrioriTree` is:
 ```
-Gao, Jiansi, Michael R May, Bruce Rannala, and Brian R Moore. 2021. “The Impact of Prior Misspecification on Bayesian Phylodynamic Inference of Biogeographic History.” bioRxiv.
+Jiansi Gao, Michael R May, Bruce Rannala, and Brian R Moore. 2022. “The Impact of Prior Misspecification on Bayesian Phylodynamic Inference of Biogeographic History.” bioRxiv.
 ```
 
 ## Description
