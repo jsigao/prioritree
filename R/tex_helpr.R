@@ -1,21 +1,22 @@
-#' Generate description for the prior specification on the number of dispersal routes, \eqn{\Delta}.
+#' Generate the description for the prior specification on the number of dispersal routes, \eqn{\Delta}.
 #' 
 #' @param states_num Number of discrete states of the study trait.
 #' @param symmetry Whether the specified geographic model is symmetric (true) or asymmetric (false)
-#' @param delta_prior Which of the three prior options to put on \eqn{\Delta}, including
-#' "Poisson": a(n offset) Poisson distribution (the default option);
-#' "Uniform": a uniform distribution between zero and the maximum \eqn{\Delta} (when all the dispersal routes exist), and;
-#' "Beta-Binomial": a Beta-Binomial distribution. 
+#' @param delta_prior Which of the three prior options to put on \eqn{\Delta}, including:
+#' \itemize{
+#'   \item "Poisson": a(n offset) Poisson distribution (the default option);
+#'   \item "Uniform": a uniform distribution between zero and the maximum \eqn{\Delta} (when all the dispersal routes exist), and;
+#'   \item "Beta-Binomial": a Beta-Binomial distribution.
+#' }
 #' @param poisson_default Whether to specify the default Poisson prior in BEAUti.
 #' @param poisson_lambda The rate parameter (\eqn{\lambda}) of the Poisson distribution.
 #' @param alpha_beta Parameter \eqn{\alpha} of the Beta-Binomial distribution.
 #' @param beta_beta Parameter \eqn{\beta} of the Beta-Binomial distribution.
 #' @return an R markdown paragraph describing the specified prior on the number of dispersal routes, \eqn{\Delta}.
-#' @export
 #' 
 #' @examples
 #' description_deltaprior(5L, T, "Poisson", T)
-
+#' @keywords internal
 description_deltaprior <- function(states_num, symmetry = T, delta_prior = c("Poisson", "Uniform", "Beta-Binomial"), poisson_default = T, poisson_lambda = 0, 
                                    alpha_beta = 1, beta_beta = 1) {
   
@@ -87,12 +88,14 @@ description_deltaprior <- function(states_num, symmetry = T, delta_prior = c("Po
   return(deltaprior_description)
 }
 
-#' Generate description for the prior specification on the average dispersal rate, \eqn{\mu}.
+#' Generate the description for the prior specification on the average dispersal rate, \eqn{\mu}.
 #' 
-#' @param mu_prior Which of the three prior options to put on \eqn{\mu}, including
-#' "CTMC rate-ref (BEAST default)":
-#' "Hierarchical Exponential":
-#' "Empirical-Informed Exponential":
+#' @param mu_prior Which of the three prior options to put on \eqn{\mu}, including:
+#' \itemize{
+#'   \item "CTMC rate-ref (BEAST default)": default prior recommended by BEAUti on the average dispersal rate;
+#'   \item "Hierarchical Exponential": an exponential prior whose mean is under a hyperprior and will be inferred from the data, and;
+#'   \item "Empirical-Informed Exponential": an exponential prior whose mean is informed by prior knowledge of the study system.
+#' }
 #' @param tree_length Length of the phylogenetic tree (sum of all the branch lengths, in unit of time).
 #' @param tree_num Number of phylogenetic trees to condition on (1 when the tree is fixed).
 #' @param hierachexp_mu95interval \eqn{95\%} prior interval of the hierarchical Exponential distribution.
@@ -100,16 +103,18 @@ description_deltaprior <- function(states_num, symmetry = T, delta_prior = c("Po
 #' @param hierachexp_dispersaleventsnummean Prior mean of the number of dispersal events over the phylogeny under the Hierarchical Exponential prior.
 #' @param hierachexp_dispersaleventsnum95interval \eqn{95\%} prior interval of the number of dispersal events over the phylogeny under the hierarchical Exponential prior.
 #' @param empinformed_dispersaleventsnummean Prior mean of the number of dispersal events over the phylogeny under the Empirical-Informed Exponential prior.
-#' @param parsimonyscore_quantile The quantile of the prior distribution of the number of dispersal events to the put the parsimony score at.
+#' @param parsimonyscore_quantile The quantile of the prior distribution of the number of dispersal events to put the parsimony score at.
 #' @return an R markdown paragraph describing the specified prior on the average dispersal rate, \eqn{\mu}.
-#' @export
 #' 
 #' @examples
 #' description_muprior("CTMC rate-ref (BEAST default)", 1000, 1)
+#' @keywords internal
 description_muprior <- function(mu_prior = c("CTMC rate-ref (BEAST default)", "Hierarchical Exponential", "Empirical-Informed Exponential"), 
                                 tree_length = 1, tree_num = 1L, hierachexp_mu95interval = NULL, 
                                 hierachexp_alphaofgamma = 0.5, hierachexp_dispersaleventsnummean = 1, 
                                 hierachexp_dispersaleventsnum95interval = NULL, empinformed_dispersaleventsnummean = 1, parsimonyscore_quantile = 0.5) {
+  
+  mu_prior <- match.arg(mu_prior)
   
   muprior_additional <- ""
   dispersaleventsnumprior_parsimonyscore_quantile <- paste0("putting the parsimony score at the $", 
@@ -162,16 +167,19 @@ description_muprior <- function(mu_prior = c("CTMC rate-ref (BEAST default)", "H
   return(muprior_description)
 }
 
-#' Generate description (in the selected source format) for the data used in the study
+#' Generate the description (in the selected format) of the data used in the study.
 #' 
-#' @param taxa_num Number of taxa in the study data
+#' @param taxa_num Number of taxa in the study data.
 #' @param states_num Number of discrete states of the study trait.
-#' @return a paragraph (in the selected source format) describing the data used in the study
-#' @export
+#' @param format One of "HTML", "Latex", or "Markdown".
+#' @return a paragraph (in the selected format) describing the data used in the study
 #' 
 #' @examples
 #' tex_data(1000, 10, "HTML")
-tex_data <- function(taxa_num = 1, states_num = 1, format = "HTML") {
+#' @keywords internal
+tex_data <- function(taxa_num = 1, states_num = 1, format = c("HTML", "Latex", "Markdown")) {
+  
+  format <- match.arg(format)
   
   format_idx <- which(.pkg_env$tex_helprs$all_format == format)
   data_title <- paste0(.pkg_env$tex_helprs$section_wrapper[[format_idx]][1], "Data", .pkg_env$tex_helprs$section_wrapper[[format_idx]][2])
@@ -180,7 +188,20 @@ tex_data <- function(taxa_num = 1, states_num = 1, format = "HTML") {
   return(paste0(data_title, data_body, .pkg_env$tex_helprs$section_ending[format_idx]))
 }
 
-tex_model <- function(bssvs = T, symmetry = T, format = "HTML", render_citation = T) {
+#' Generate the description (in the selected format) of the model specified in the study.
+#' 
+#' @param bssvs Whether Bayesian Stochastic Search Variable Selection (BSSVS) is used (default true) in the discrete-geographic model.
+#' @param symmetry Whether the discrete-geographic mode is symmetric (default true) or asymmetric.
+#' @param format One of "HTML", "Latex", or "Markdown".
+#' @param render_citation Whether the reference list will be rendered at the end of the methods document (default true; false when just showing the description in the HTML panel)
+#' @return a paragraph (in the selected format) describing the model specified in the study.
+#' 
+#' @examples
+#' tex_model(T, T, "Markdown", T)
+#' @keywords internal
+tex_model <- function(bssvs = T, symmetry = T, format = c("HTML", "Latex", "Markdown"), render_citation = T) {
+  
+  format <- match.arg(format)
   
   format_idx <- which(.pkg_env$tex_helprs$all_format == format)
   model_title <- paste0(.pkg_env$tex_helprs$section_wrapper[[format_idx]][1], "Model", .pkg_env$tex_helprs$section_wrapper[[format_idx]][2])
@@ -226,9 +247,32 @@ tex_model <- function(bssvs = T, symmetry = T, format = "HTML", render_citation 
   return(paste0(model_title, model_generic, matrix_construction, modelsymmetry_statement, mu_source, .pkg_env$tex_helprs$section_ending[format_idx]))
 }
 
-
-tex_deltaprior <- function(states_num, symmetry = T, delta_prior = "Poisson", poisson_default = T, poisson_lambda = 0,
-                           alpha_beta = 1, beta_beta = 1, format = "HTML", render_citation = T) {
+#' Generate the description (in the selected format) of the prior on the number of dispersal routes, \eqn{\Delta}, specified in the study.
+#' 
+#' @param states_num Number of discrete states of the study trait.
+#' @param symmetry Whether the discrete-geographic mode is symmetric (default true) or asymmetric.
+#' @param delta_prior Which of the three prior options to put on \eqn{\Delta}, including:
+#' \itemize{
+#'   \item "Poisson": a(n offset) Poisson distribution (the default option);
+#'   \item "Uniform": a uniform distribution between zero and the maximum \eqn{\Delta} (when all the dispersal routes exist), and;
+#'   \item "Beta-Binomial": a Beta-Binomial distribution.
+#' }
+#' @param poisson_default Whether to specify the default Poisson prior in BEAUti.
+#' @param poisson_lambda The rate parameter (\eqn{\lambda}) of the Poisson distribution.
+#' @param alpha_beta Parameter \eqn{\alpha} of the Beta-Binomial distribution.
+#' @param beta_beta Parameter \eqn{\beta} of the Beta-Binomial distribution.
+#' @param format One of "HTML", "Latex", or "Markdown".
+#' @param render_citation Whether the reference list will be rendered at the end of the methods document (default true; false when just showing the description in the HTML panel).
+#' @return a paragraph (in the selected format) describing the prior on the number of dispersal routes specified in the study.
+#' 
+#' @examples
+#' tex_deltaprior(states_num = 5L, symmetry = T, delta_prior = "Poisson", poisson_default = T, poisson_lambda = log(2))
+#' @keywords internal
+tex_deltaprior <- function(states_num, symmetry = T, delta_prior = c("Poisson", "Uniform", "Beta-Binomial"), poisson_default = T, poisson_lambda = 0,
+                           alpha_beta = 1, beta_beta = 1, format = c("HTML", "Latex", "Markdown"), render_citation = T) {
+  
+  delta_prior <- match.arg(delta_prior)
+  format <- match.arg(format)
   
   format_idx <- which(.pkg_env$tex_helprs$all_format == format)
   delta_max <- ((!symmetry) + 1) * choose(states_num, 2)
@@ -297,9 +341,33 @@ tex_deltaprior <- function(states_num, symmetry = T, delta_prior = "Poisson", po
   return(paste0(deltaprior_tex, .pkg_env$tex_helprs$section_ending[format_idx]))
 }
 
-
-tex_muprior <- function(mu_prior = "CTMC rate-ref (BEAST default)", tree_length = 1, tree_num = 1L, hierachexp_alphaofgamma = 0.5,
-                        hierachexp_dispersaleventsnummean = 1, empinformed_dispersaleventsnummean = 1, parsimony_score = 1, format = "HTML", render_citation = T) {
+#' Generate the description (in the selected format) of the prior on the average dispersal rate, \eqn{\mu}, specified in the study.
+#' 
+#' @param mu_prior Which of the three prior options to put on \eqn{\mu}, including:
+#' \itemize{
+#'   \item "CTMC rate-ref (BEAST default)": default prior recommended by BEAUti on the average dispersal rate;
+#'   \item "Hierarchical Exponential": an exponential prior whose mean is under a hyperprior and will be inferred from the data, and;
+#'   \item "Empirical-Informed Exponential": an exponential prior whose mean is informed by prior knowledge of the study system.
+#' }
+#' @param tree_length Length of the phylogenetic tree (sum of all the branch lengths, in unit of time).
+#' @param tree_num Number of phylogenetic trees to condition on (1 when the tree is fixed).
+#' @param hierachexp_alphaofgamma Shape and rate parameter of the Gamma hyperprior of the Hierarchical Exponential prior.
+#' @param hierachexp_dispersaleventsnummean Prior mean of the number of dispersal events over the phylogeny under the Hierarchical Exponential prior.
+#' @param empinformed_dispersaleventsnummean Prior mean of the number of dispersal events over the phylogeny under the Empirical-Informed Exponential prior.
+#' @param parsimony_score Parsimony number for the discrete-geographic data given the provided tree.
+#' @param format One of "HTML", "Latex", or "Markdown".
+#' @param render_citation Whether the reference list will be rendered at the end of the methods document (default true; false when just showing the description in the HTML panel).
+#' @return a paragraph (in the selected format) describing the prior on the average dispersal rate specified in the study.
+#' 
+#' @examples
+#' tex_muprior(mu_prior = "CTMC rate-ref (BEAST default)", tree_length = 1000, tree_num = 1, parsimony_score = 500L)
+#' @keywords internal
+tex_muprior <- function(mu_prior = c("CTMC rate-ref (BEAST default)", "Hierarchical Exponential", "Empirical-Informed Exponential"), tree_length = 1, 
+                        tree_num = 1L, hierachexp_alphaofgamma = 0.5, hierachexp_dispersaleventsnummean = 1, empinformed_dispersaleventsnummean = 1, 
+                        parsimony_score = 1, format = c("HTML", "Latex", "Markdown"), render_citation = T) {
+  
+  mu_prior <- match.arg(mu_prior)
+  format <- match.arg(format)
   
   format_idx <- which(.pkg_env$tex_helprs$all_format == format)
   prior_title <- paste0(.pkg_env$tex_helprs$subsection_wrapper[[format_idx]][1], "Prior on the Average Dispersal Rate", .pkg_env$tex_helprs$subsection_wrapper[[format_idx]][2])
@@ -335,13 +403,14 @@ tex_muprior <- function(mu_prior = "CTMC rate-ref (BEAST default)", tree_length 
   } else if (mu_prior == "Empirical-Informed Exponential") {
     
     empinformed_expmean <- empinformed_dispersaleventsnummean / tree_length
-    dispersaleventnum_dividedbyparsimonyscore <- empinformed_dispersaleventsnummean/parsimony_score
+    dispersaleventnum_dividedbyparsimonyscore <- empinformed_dispersaleventsnummean / parsimony_score
     
     prior_generic <- paste0("We specify ", "an Exponential prior with the rate parameter, ${\\theta = ",
-                            formatC(1 / empinformed_expmean, digits = 2, format = "fg"), "}$, ")
+                            formatC(1 / empinformed_expmean, digits = 3, format = "fg"), "}$, ")
     dispersaleventsnumprior_dist <- paste0("which allows the resulting prior on the expected number of dispersal events across the entire biogeographic history ",
                                            "to have a mean that is ", empinformed_dispersaleventsnummean, " (",
-                                           dispersaleventnum_dividedbyparsimonyscore, " times of the parsimony score, ", parsimony_score, ").\n")
+                                           formatC(dispersaleventnum_dividedbyparsimonyscore, digits = 2, format = "f", drop0trailing = T), 
+                                           " times of the parsimony score, ", parsimony_score, ").\n")
     
     muprior_tex <- paste0(prior_title, prior_explanation, prior_generic, dispersaleventsnumprior_dist)
   }
@@ -349,16 +418,40 @@ tex_muprior <- function(mu_prior = "CTMC rate-ref (BEAST default)", tree_length 
   return(paste0(muprior_tex, .pkg_env$tex_helprs$section_ending[format_idx]))
 }
 
-
-tex_prior <- function(deltaprior_text, muprior_text, format = "HTML") {
+#' Combine the descriptions on the two priors to generate the Prior subsection of the Methods section.
+#' 
+#' @param deltaprior_text Description of the prior on the number of dispersal routes, \eqn{\Delta}.
+#' @param muprior_text Description of the prior on the average dispersal rate, \eqn{\mu}.
+#' @param format One of "HTML", "Latex", or "Markdown".
+#' @return paragraphs (in the selected format) describing prior specification in the study
+#' 
+#' @examples
+#' deltaprior_text <- tex_deltaprior(states_num = 5L, symmetry = T, delta_prior = "Poisson", poisson_default = T, format = "Markdown")
+#' muprior_text <- tex_muprior(mu_prior = "CTMC rate-ref (BEAST default)", tree_length = 1000, tree_num = 1L, parsimony_score = 500L)
+#' tex_prior(deltaprior_text, muprior_text, "HTML")
+tex_prior <- function(deltaprior_text, muprior_text, format = c("HTML", "Latex", "Markdown")) {
+  format <- match.arg(format)
+  
   format_idx <- which(.pkg_env$tex_helprs$all_format == format)
   prior_title <- paste0(.pkg_env$tex_helprs$section_wrapper[[format_idx]][1], "Prior", .pkg_env$tex_helprs$section_wrapper[[format_idx]][2])
   
   return(paste0(prior_title, deltaprior_text, muprior_text))
 }
 
-
-tex_bayesianinference <- function(empiricaltree_mh = T, tree_num = 1, bssvs = T, format = "HTML", render_citation = T) {
+#' Generate the description (in the selected format) of the Bayesian inference procedure used in the study.
+#' 
+#' @param empiricaltree_mh Whether treating the provided distribution of trees as part of the Markov chain (default true) or averaging over the distribution uniformly.
+#' @param tree_num Number of phylogenetic trees to condition on (1 when the tree is fixed).
+#' @param bssvs Whether Bayesian Stochastic Search Variable Selection (BSSVS) is used (default true) in the discrete-geographic model.
+#' @param format One of "HTML", "Latex", or "Markdown".
+#' @param render_citation Whether the reference list will be rendered at the end of the methods document (default true; false when just showing the description in the HTML panel).
+#' @return a paragraph (in the selected format) describing the Bayesian inference procedure used in the study.
+#' 
+#' @examples
+#' tex_bayesianinference(T, 1, T)
+#' @keywords internal
+tex_bayesianinference <- function(empiricaltree_mh = T, tree_num = 1, bssvs = T, format = c("HTML", "Latex", "Markdown"), render_citation = T) {
+  format <- match.arg(format)
   
   format_idx <- which(.pkg_env$tex_helprs$all_format == format)
   valid_sequential <- (tree_num > 1) && empiricaltree_mh
@@ -407,8 +500,19 @@ tex_bayesianinference <- function(empiricaltree_mh = T, tree_num = 1, bssvs = T,
   return(paste0(bayesian_inference, tree_dist, .pkg_env$tex_helprs$section_ending[format_idx]))
 }
 
-
-tex_posterioranalysis <- function(mcmc_chainlength = 1, mcmc_samplingfreq = 1, mcmc_numreplicates = 2, format = "HTML") {
+#' Generate the description (in the selected format) of the MCMC simulation inferring the posterior distribution.
+#' 
+#' @param mcmc_chainlength Number of MCMC generations to run the analysis
+#' @param mcmc_samplingfreq Every number of MCMC generations to log to the output
+#' @param mcmc_numreplicates Number of MCMC replicates to run
+#' @param format One of "HTML", "Latex", or "Markdown".
+#' @return a paragraph (in the selected format) describing the MCMC simulation inferring the posterior distribution.
+#' 
+#' @examples
+#' tex_posterioranalysis(1000000, 1000, 2)
+#' @keywords internal
+tex_posterioranalysis <- function(mcmc_chainlength = 1, mcmc_samplingfreq = 1, mcmc_numreplicates = 2, format = c("HTML", "Latex", "Markdown")) {
+  format <- match.arg(format)
   
   format_idx <- which(.pkg_env$tex_helprs$all_format == format)
   postrior_title <- paste0(.pkg_env$tex_helprs$subsection_wrapper[[format_idx]][1], "Estimating the Joint Posterior Distribution of Geographic Model Parameters", .pkg_env$tex_helprs$subsection_wrapper[[format_idx]][2])
@@ -425,9 +529,22 @@ tex_posterioranalysis <- function(mcmc_chainlength = 1, mcmc_samplingfreq = 1, m
   return(posterior_tex)
 }
 
-
-tex_summarystats <- function(do_stochasticmapping = "Stochastic mapping (complete history, simulation-based)",
-                             markovjumps_total = T, markovjumps_pairwise = T, format = "HTML", render_citation = T) {
+#' Generate the description (in the selected format) of the geographic history inference in the study.
+#' 
+#' @param do_stochasticmapping Whether to perform stochastic mapping to simulate full histories of the discrete-geographic trait (default) or perform the "fast" stochastic mapping to compute the expected number of events on each branch
+#' @param markovjumps_total Whether to compute the number of events among all discrete states (default true) or not
+#' @param markovjumps_pairwise Whether to compute the number of events between each pair of discrete states (default true) or not
+#' @param format One of "HTML", "Latex", or "Markdown".
+#' @param render_citation Whether the reference list will be rendered at the end of the methods document (default true; false when just showing the description in the HTML panel).
+#' @return a paragraph (in the selected format) describing the geographic history inference in the study.
+#' 
+#' @examples
+#' tex_summarystats("Stochastic mapping (complete history, simulation-based)", T, T)
+#' @keywords internal
+tex_summarystats <- function(do_stochasticmapping = c("Stochastic mapping (complete history, simulation-based)", "Fast stochastic mapping (incomplete history, simulation-free)"),
+                             markovjumps_total = T, markovjumps_pairwise = T, format = c("HTML", "Latex", "Markdown"), render_citation = T) {
+  do_stochasticmapping <- match.arg(do_stochasticmapping)
+  format <- match.arg(format)
   
   format_idx <- which(.pkg_env$tex_helprs$all_format == format)
   summarystats_title <- paste0(.pkg_env$tex_helprs$subsection_wrapper[[format_idx]][1], "Inferring Biogeographic History", .pkg_env$tex_helprs$subsection_wrapper[[format_idx]][2])
@@ -467,8 +584,22 @@ tex_summarystats <- function(do_stochasticmapping = "Stochastic mapping (complet
   return(summarystats_tex)
 }
 
-
-tex_powerposterior <- function(ml_numstones = 0, ml_chainlengthperstone = 0, ml_samplingfreq = 0, ml_alphaofbeta = 0.3, mcmc_numreplicates = 2, format = "HTML", render_citation = T) {
+#' Generate the description (in the selected format) of the power-posterior analysis used in the study.
+#' 
+#' @param ml_numstones Number of powers ("stones") to use in the power-posterior analysis.
+#' @param ml_chainlengthperstone Number of generations to run per stone.
+#' @param ml_samplingfreq Every number of generations to log to the output.
+#' @param ml_alphaofbeta Alpha of the Beta distribution that decides where to put the stones.
+#' @param mcmc_numreplicates Number of MCMC replicates to run.
+#' @param format One of "HTML", "Latex", or "Markdown".
+#' @param render_citation Whether the reference list will be rendered at the end of the methods document (default true; false when just showing the description in the HTML panel).
+#' @return A paragraph (in the selected format) describing the power-posterior analysis used in the study.
+#' 
+#' @examples
+#' tex_powerposterior(ml_numstones = 64, ml_chainlengthperstone = 500000, ml_samplingfreq = 1000, ml_alphaofbeta = 0.3, mcmc_numreplicates = 2)
+#' @keywords internal
+tex_powerposterior <- function(ml_numstones = 0, ml_chainlengthperstone = 0, ml_samplingfreq = 0, ml_alphaofbeta = 0.3, mcmc_numreplicates = 2, format = c("HTML", "Latex", "Markdown"), render_citation = T) {
+  format <- match.arg(format)
   
   format_idx <- which(.pkg_env$tex_helprs$all_format == format)
   powerposterior_title <- paste0(.pkg_env$tex_helprs$subsection_wrapper[[format_idx]][1], "Estimating Marginal Likelihood", .pkg_env$tex_helprs$subsection_wrapper[[format_idx]][2])
@@ -494,8 +625,19 @@ tex_powerposterior <- function(ml_numstones = 0, ml_chainlengthperstone = 0, ml_
   return(powerposterior_tex)
 }
 
-
-tex_prioranalysis <- function(mcmc_chainlength = 1, mcmc_samplingfreq = 1, mcmc_numreplicates = 2, format = "HTML") {
+#' Generate the description (in the selected format) of MCMC simulations where we infer the joint prior distribution.
+#' 
+#' @param mcmc_chainlength Number of MCMC generations to run the analysis
+#' @param mcmc_samplingfreq Every number of MCMC generations to log to the output
+#' @param mcmc_numreplicates Number of MCMC replicates to run
+#' @param format One of "HTML", "Latex", or "Markdown".
+#' @return a paragraph (in the selected format) describing the MCMC simulations inferring the joint prior distribution.
+#' 
+#' @examples
+#' tex_prioranalysis(1000000, 1000, 2)
+#' @keywords internal
+tex_prioranalysis <- function(mcmc_chainlength = 1, mcmc_samplingfreq = 1, mcmc_numreplicates = 2, format = c("HTML", "Latex", "Markdown")) {
+  format <- match.arg(format)
   
   format_idx <- which(.pkg_env$tex_helprs$all_format == format)
   prior_title <- paste0(.pkg_env$tex_helprs$subsection_wrapper[[format_idx]][1], "Estimating the Joint Prior distribution of Geographic model parameters", .pkg_env$tex_helprs$subsection_wrapper[[format_idx]][2])
@@ -512,8 +654,20 @@ tex_prioranalysis <- function(mcmc_chainlength = 1, mcmc_samplingfreq = 1, mcmc_
   return(paste0(prior_title, prior_body, .pkg_env$tex_helprs$section_ending[format_idx]))
 }
 
-
-tex_dcanalysis <- function(lheat = 1, mcmc_chainlength = 1, mcmc_samplingfreq = 1, mcmc_numreplicates = 2, format = "HTML", render_citation = T) {
+#' Generate the description (in the selected format) of the MCMC simulations inferring the data-cloned posterior distribution.
+#' 
+#' @param lheat Number of data clones
+#' @param mcmc_chainlength Number of MCMC generations to run the analysis
+#' @param mcmc_samplingfreq Every number of MCMC generations to log to the output
+#' @param mcmc_numreplicates Number of MCMC replicates to run
+#' @param format One of "HTML", "Latex", or "Markdown".
+#' @return a paragraph (in the selected format) describing the MCMC simulations inferring the data-cloned posterior distribution.
+#' 
+#' @examples
+#' tex_dcanalysis(5, 1000000, 1000, 2)
+#' @keywords internal
+tex_dcanalysis <- function(lheat = 1, mcmc_chainlength = 1, mcmc_samplingfreq = 1, mcmc_numreplicates = 2, format = c("HTML", "Latex", "Markdown"), render_citation = T) {
+  format <- match.arg(format)
   
   format_idx <- which(.pkg_env$tex_helprs$all_format == format)
   dc_title <- paste0(.pkg_env$tex_helprs$subsection_wrapper[[format_idx]][1], "Asseing Prior Sensity Using Data Cloning", .pkg_env$tex_helprs$subsection_wrapper[[format_idx]][2])
@@ -551,9 +705,34 @@ tex_dcanalysis <- function(lheat = 1, mcmc_chainlength = 1, mcmc_samplingfreq = 
   return(paste0(dc_title, dc_body, .pkg_env$tex_helprs$section_ending[format_idx]))
 }
 
-
-tex_analysis <- function(further_analysis = "", posterioranalysis_text = "", summarystats_text = "", powerposterior_text = "", 
-                         prioranalysis_text = "", dcanalysis_text = "", format = "HTML") {
+#' Combine the descriptions on different types of analyses to generate the Analysis subsection of the Methods section.
+#' 
+#' @param further_analysis The type of analysis selected to run, including:
+#' \itemize{
+#'   \item "": regular posterior analysis;
+#'   \item "Marginal likelihood estimation": power-posterior analysis to estimate marginal likelihood (after regular posterior analysis);
+#'   \item "Under prior": analysis to infer the joint prior distribution, and;
+#'   \item "Data cloning": data-cloned posterior analysis.
+#' }
+#' @param posterioranalysis_text Description of the MCMC simulation inferring the posterior distribution.
+#' @param summarystats_text Description of the geographic history inference.
+#' @param powerposterior_text Description of the power-posterior analysis.
+#' @param prioranalysis_text Description of MCMC simulations where we infer the joint prior distribution.
+#' @param dcanalysis_text Description of the MCMC simulations inferring the data-cloned posterior distribution.
+#' @param format One of "HTML", "Latex", or "Markdown".
+#' @return paragraphs (in the selected format) describing the analyses of the study
+#' 
+#' @examples
+#' posterioranalysis_text <- tex_posterioranalysis(1000000, 1000, 2)
+#' summarystats_text <- tex_summarystats("Stochastic mapping (complete history, simulation-based)")
+#' powerposterior_text <- tex_powerposterior(64, 500000, 1000, 0.3, 2)
+#' tex_analysis(further_analysis = "Marginal likelihood estimation", posterioranalysis_text = posterioranalysis_text, summarystats_text = summarystats_text, powerposterior_text = powerposterior_text)
+#' @keywords internal
+tex_analysis <- function(further_analysis = c("", "Marginal likelihood estimation", "Under prior", "Data cloning"), posterioranalysis_text = "", 
+                         summarystats_text = "", powerposterior_text = "", prioranalysis_text = "", dcanalysis_text = "", format = c("HTML", "Latex", "Markdown")) {
+  
+  further_analysis <- match.arg(further_analysis)
+  format <- match.arg(format)
   
   format_idx <- which(.pkg_env$tex_helprs$all_format == format)
   analysis_title <- paste0(.pkg_env$tex_helprs$section_wrapper[[format_idx]][1], "Analysis", .pkg_env$tex_helprs$section_wrapper[[format_idx]][2])
@@ -561,7 +740,7 @@ tex_analysis <- function(further_analysis = "", posterioranalysis_text = "", sum
   analysis_body <- ""
   if (further_analysis == "") {
     analysis_body <- paste0(posterioranalysis_text, summarystats_text)
-  } else if (further_analysis == "Marginal likehood estimation") {
+  } else if (further_analysis == "Marginal likelihood estimation") {
     analysis_body <- paste0(posterioranalysis_text, summarystats_text, powerposterior_text)
   } else if (further_analysis == "Under prior") {
     analysis_body <- paste0(prioranalysis_text, summarystats_text)
@@ -571,4 +750,3 @@ tex_analysis <- function(further_analysis = "", posterioranalysis_text = "", sum
   
   return(paste0(analysis_title, analysis_body))
 }
-

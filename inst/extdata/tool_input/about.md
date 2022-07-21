@@ -1,4 +1,4 @@
-# PrioriTree: Setting up BEAST Discrete-Biogeographic Analyses with Visualized Priors and Assessing Their Impact
+# PrioriTree: Setting up BEAST Discrete-Geographic Analyses with Visualized Priors and Assessing Their Impact
 An interactive web utility to help researchers specify priors in input files for---and process output files from---analyses of discrete biogeographic history performed using the `BEAST`.
 
 ## Manual
@@ -14,8 +14,8 @@ Jiansi Gao, Michael R May, Bruce Rannala, and Brian R Moore. 2022. “The Impact
 ```
 
 ## Description
-`PrioriTree` is motivated by properties of the discrete-biogeographic models implemented in `BEAST` ([Lemey et al. 2009](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1000520); [Edwards et al. 2011](https://www.sciencedirect.com/science/article/pii/S0960982211006452)) and issues with the commonly used default priors in `BEAST`, identified by Gao et al. (2021).
-`PrioriTree` allows users to specify priors on the discrete-biogeographic model parameters in a biologically informed way (*e.g.*, specifying the prior on the average dispersal rate by expressing understanding on the expected number of pathogen dispersal events over the entire epidemic history).
+`PrioriTree` is motivated by properties of the discrete-geographic models implemented in `BEAST` ([Lemey et al. 2009](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1000520); [Edwards et al. 2011](https://www.sciencedirect.com/science/article/pii/S0960982211006452)) and issues with the commonly used default priors in `BEAST`, identified by Gao et al. (2021).
+`PrioriTree` allows users to specify priors on the discrete-geographic model parameters in a biologically informed way (*e.g.*, specifying the prior on the average dispersal rate by expressing understanding on the expected number of pathogen dispersal events over the entire epidemic history).
 The program also allows users to specify these prior assumptions in an interactive manner; it dynamically visualizes the resulting prior distribution according to users' specification in real time.
 At the end, it generates a readily-runnable `BEAST` XML script (as well as the associated methods template) to perform the analysis that the user conceives.
-The other main functionality provided by `PrioriTree` is setting up additional analyses (including posterior-predictive checking, data cloning, and robust Bayesian) to evaluate the impact of alternative discrete-biogeographic (prior)model specification and visualizing the result.
+The other main functionality provided by `PrioriTree` is setting up additional analyses (including posterior-predictive checking, data cloning, and robust Bayesian) to evaluate the impact of alternative discrete-geographic (prior)model specification and visualizing the result.

@@ -1,5 +1,6 @@
-#' @param value_list list where each element is a vector of values to plot
-#' @param value_anchor true values
+#' @param value_list A list where each element is a vector of values to plot
+#' @param value_anchor The true value
+#' @keywords internal
 multigroup_boxplot <- function(value_list, value_anchor = NULL, anchor_col = "black", group_at = NULL, rep_id = NULL, boxgroup_gap = 0.5, boxset_gap = 0.5,
                                box_col = "black", box_border = F, box_lty = 1, whiskcol = "black", staplecol = "black", 
                                x_lab = NA, y_lab = NA, axis_log = NULL, fig_main = NA, 
@@ -130,7 +131,7 @@ multigroup_boxplot <- function(value_list, value_anchor = NULL, anchor_col = "bl
   }
 }
 
-
+#' @keywords internal
 myboxplot.stats <- function (x, coef = NULL, do.conf = TRUE, do.out = TRUE) {
   nna <- !is.na(x)
   n <- sum(nna)
@@ -143,6 +144,7 @@ myboxplot.stats <- function (x, coef = NULL, do.conf = TRUE, do.out = TRUE) {
 }
 
 
+#' @keywords internal
 myboxplot <- function (x, ..., range = 1.5, width = NULL, varwidth = FALSE, 
                        notch = FALSE, outline = TRUE, names, plot = TRUE, border = par("fg"), 
                        col = NULL, log = "", pars = list(boxwex = 0.8, staplewex = 0.5, outwex = 0.5), horizontal = FALSE, add = FALSE, at = NULL) 

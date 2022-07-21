@@ -5,6 +5,10 @@ if (!requireNamespace("shiny", quietly = T)) {
 #' @import shiny
 #' @export
 run_app <- function() {
+  
+  options(warn = -1)
+  options(shiny.maxRequestSize = 16384*1024^3)
+  options(shiny.reactlog = T)
 
   extdata_path <- system.file("extdata/", package = "prioritree")
   literature_bib_path <- paste0(extdata_path, "tool_input/literature.bib")
@@ -150,7 +154,7 @@ run_app <- function() {
                                                                                                                               shiny::tabPanel(title = "Model Exploration",
                                                                                                                                               shiny::h6(""),
                                                                                                                                               shiny::selectInput(inputId = "further_analysis", label = "Setting up further analysis for model exploration", 
-                                                                                                                                                                 choices = c(Choose = '', "Marginal likehood estimation", "Under prior", "Data cloning"), 
+                                                                                                                                                                 choices = c(Choose = '', "Marginal likelihood estimation", "Under prior", "Data cloning"), 
                                                                                                                                                                  multiple = F, selectize = F),
                                                                                                                                               shiny::uiOutput("furtheranalysis_ui")
                                                                                                                               )
@@ -376,7 +380,7 @@ run_app <- function() {
                                                                                                                              ),
                                                                                                                              
                                                                                                                              shiny::uiOutput(outputId = "focalparamsummary_paramname_ui"),
-                                                                                                                             shiny::actionButton(inputId = "focalparamsummary_startprocessing", label = "Read in the log files and start initial processing")
+                                                                                                                             shiny::actionButton(inputId = "focalparamsummary_startprocessing", label = "Read in files and start initial processing")
                                                                                                              ),
                                                                                                              
                                                                                                              shiny::tabPanel(title = "Step 2: Configure Post-Processing Settings", value = "processing_settings",
@@ -505,7 +509,7 @@ run_app <- function() {
                                                                                                                              ),
                                                                                                                              
                                                                                                                              shiny::uiOutput(outputId = "focalparam2summary_paramname_ui"),
-                                                                                                                             shiny::actionButton(inputId = "focalparam2summary_startprocessing", label = "Read in the log files and start initial processing")
+                                                                                                                             shiny::actionButton(inputId = "focalparam2summary_startprocessing", label = "Read in files and start initial processing")
                                                                                                              ),
                                                                                                              
                                                                                                              shiny::tabPanel(title = "Step 2: Configure Post-Processing Settings", value = "processing_settings",
@@ -1002,7 +1006,7 @@ run_app <- function() {
     xmlviewertabs_status <- shiny::reactiveValues(powerposteriortab_clicked = F)
     shiny::observeEvent(input$further_analysis, {
       xmlviewer_powerposterior_disabled <- (is.null(states_dat()) || is.null(tree_values$tree) || 
-                                              (!maintabs_status$step4tab_clicked) || ((!is.null(input$further_analysis)) && input$further_analysis != "Marginal likehood estimation"))
+                                              (!maintabs_status$step4tab_clicked) || ((!is.null(input$further_analysis)) && input$further_analysis != "Marginal likelihood estimation"))
       shinyjs::toggle(selector = "#xmlviewer_tabs li a[data-value=xmlpowerposterior]", condition = !xmlviewer_powerposterior_disabled)
       if (!xmlviewer_powerposterior_disabled) {
         shiny::updateTabsetPanel(session, inputId = "xmlviewer_tabs", selected = "xmlpowerposterior")
@@ -1011,7 +1015,7 @@ run_app <- function() {
     })
     
     shiny::observeEvent(input$further_analysis, {
-      if ((!is.null(input$further_analysis)) && (input$further_analysis != "Marginal likehood estimation") && (input$xmlviewer_tabs == "xmlpowerposterior")) {
+      if ((!is.null(input$further_analysis)) && (input$further_analysis != "Marginal likelihood estimation") && (input$xmlviewer_tabs == "xmlpowerposterior")) {
         shiny::updateTabsetPanel(session, inputId = "xmlviewer_tabs", selected = "xmlphyloctmc")
         xmlviewertabs_status$powerposteriortab_clicked <- F
       }
@@ -1360,7 +1364,7 @@ run_app <- function() {
         )
         
         
-      } else if (input$further_analysis == "Marginal likehood estimation") {
+      } else if (input$further_analysis == "Marginal likelihood estimation") {
         furtheranalysis_ui_list <- tagAppendChildren(furtheranalysis_ui_list, 
                                                      numericInput(inputId = "ml_chainlengthperstone", label = "Chain length per power posterior step", value = 250000, min = 1),
                                                      numericInput(inputId = "ml_samplingfreq", label = "Sampling frequency of the power posterior chains", value = 5000, min = 1),
@@ -1435,7 +1439,7 @@ run_app <- function() {
     
     shiny::observe({
       
-      if ("Marginal likehood estimation" %in% input$further_analysis) {
+      if ("Marginal likelihood estimation" %in% input$further_analysis) {
         
         shiny::req(input$ml_numstones)
         shiny::req(input$ml_chainlengthperstone)
@@ -1649,7 +1653,7 @@ run_app <- function() {
       
       if (input$further_analysis == "") {
         file_name <- paste0(file_name, "_posterior")
-      } else if (input$further_analysis == "Marginal likehood estimation") {
+      } else if (input$further_analysis == "Marginal likelihood estimation") {
         file_name <- paste0(file_name, "_mlafterposterior")
       } else if (input$further_analysis == "Under prior") {
         file_name <- paste0(file_name, "_underprior")
@@ -2218,7 +2222,7 @@ run_app <- function() {
       shiny::req(tree_values$tree)
       
       ml_numstones <- ml_chainlengthperstone <- ml_samplingfreq <- ml_alphaofbeta <- 0
-      if ((!is.null(input$further_analysis)) && ("Marginal likehood estimation" %in% input$further_analysis)) {
+      if ((!is.null(input$further_analysis)) && ("Marginal likelihood estimation" %in% input$further_analysis)) {
         if (!is.null(input$ml_numstones)) ml_numstones <- input$ml_numstones
         if (!is.null(input$ml_chainlengthperstone)) ml_chainlengthperstone <- input$ml_chainlengthperstone
         if (!is.null(input$ml_samplingfreq)) ml_samplingfreq <- input$ml_samplingfreq
@@ -2232,8 +2236,8 @@ run_app <- function() {
       if (!is.null(input$delta_prior)) delta_prior <- input$delta_prior
       
       lapply(output_file$file_name, function(file_name)
-        xml_monitors(discrete_trait_name = input$traitcolumn_name, file_name = gsub("_mlafterposterior", "_posterior", file_name),
-                     currentTree_output = treemodel_xml()$currentTree_output, bssvs = input$with_bssvs, lheat = lheat,
+        xml_monitors(discrete_trait_name = input$traitcolumn_name, currentTree_output = treemodel_xml()$currentTree_output, bssvs = input$with_bssvs, 
+                     file_name = gsub("_mlafterposterior", "_posterior", file_name), lheat = lheat,
                      complete_history = (input$do_stochasticmapping == "Stochastic mapping (complete history, simulation-based)"), 
                      ctmc = (input$mu_prior == "CTMC rate-ref (BEAST default)"), clockrate_mean_stochastic = (input$mu_prior == "Hierarchical Exponential"),
                      symmetry = (input$model_symmetry == "symmetric"), 
@@ -2251,7 +2255,7 @@ run_app <- function() {
       isolate(powerposteriorxml$last <- powerposteriorxml$current)
       powerposteriorxml$current <- monitors_xml()[[1]]$log_powerposterior
       
-      if (input$further_analysis != "Marginal likehood estimation" || (!xmlviewertabs_status$powerposteriortab_clicked)) {
+      if (input$further_analysis != "Marginal likelihood estimation" || (!xmlviewertabs_status$powerposteriortab_clicked)) {
         isolate(powerposteriorxml$last <- powerposteriorxml$current <- "")
       }
     })
@@ -2718,7 +2722,7 @@ run_app <- function() {
       shiny::req(input$mcmc_numreplicates)
       
       ml_numstones <- ml_chainlengthperstone <- ml_samplingfreq <- ml_alphaofbeta <- 0
-      if ((!is.null(input$further_analysis)) && ("Marginal likehood estimation" %in% input$further_analysis)) {
+      if ((!is.null(input$further_analysis)) && ("Marginal likelihood estimation" %in% input$further_analysis)) {
         if (!is.null(input$ml_numstones)) ml_numstones <- input$ml_numstones
         if (!is.null(input$ml_chainlengthperstone)) ml_chainlengthperstone <- input$ml_chainlengthperstone
         if (!is.null(input$ml_samplingfreq)) ml_samplingfreq <- input$ml_samplingfreq
@@ -3110,7 +3114,7 @@ run_app <- function() {
         if (!is.null(input$dispersaleventnum_NBmean)) {
           clockrate_mean <- input$dispersaleventnum_NBmean / tree_values$tree_length
         }
-        math_tex <- c(math_tex, paste0("$$\\mu \\sim Exp(", formatC(clockrate_mean, digits = 3, format = "fg"), ")$$"))
+        math_tex <- c(math_tex, paste0("$$\\mu \\sim Exp(", formatC(1 / clockrate_mean, digits = 3, format = "fg"), ")$$"))
       }
       
       withMathJax(paste(math_tex, collapse = "\n"))
@@ -5645,7 +5649,7 @@ run_app <- function() {
     shiny::observe({
       if (input$posteriorpredictive_geographyfile_defaultupload) {
         posteriorpredictive_states_dat(read.table(text = gsub("\t", ",", readLines(paste0(extdata_path, "analyses_setup/discrete_trait.txt"))), header = T, sep = ",", stringsAsFactors = F))
-      } else if (!is.null(input$geography_file)) {
+      } else if (!is.null(input$posteriorpredictive_geographyfile)) {
         shiny::req(input$posteriorpredictive_geographyfile)
         posteriorpredictive_states_dat(read.table(text = gsub("\t", ",", readLines(input$posteriorpredictive_geographyfile$datapath)), header = T, sep = ",", stringsAsFactors = F))
       } else {
@@ -6205,7 +6209,7 @@ run_app <- function() {
                                                                        discrete_trait_name = input$posteriorpredictive_geographyfile_traitcolumn_name,
                                                                        tree_path = posteriorpredictive_treefileset$file[[i]]$datapath[j], 
                                                                        log_path = log_path,
-                                                                       simsamples_num = simsamples_num, simulated_tmppath = simulated_tmppath)
+                                                                       simsamples_num = simsamples_num, simulated_outpath = simulated_tmppath)
           
           col_names <- colnames(read.table(log_path, header = T, sep = "\t", nrows = 1, stringsAsFactors = F, check.names = F))
           if ("pathLikelihood.theta" %in% col_names) {

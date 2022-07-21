@@ -1,108 +1,127 @@
 
-sim.history2 <- function (tree, Q, anc = NULL, nsim = 1, ...) 
-{
-  if (!inherits(tree, "phylo")) 
+#' Simulate history of discrete-character changes over a bifurcation tree conditional or unconditional on the tip states
+#' 
+#' @param tree A bifurcation tree of class "phylo"
+#' @param Q An instantaneous-rate matrix (or a list of matrices for a piecewise constant geographic model) characterizes the CTMC
+#' @param Q_ages Boundaries of time intervals for a piecewise constant geographic model (NULL means a constant model)
+#' @param root_freq The vector state frequencies at the root of the tree (that we will draw the root state from); if NULL then it's uniform
+#' @param nsim Number of simulations to perform
+#' @param conditional Whether condition on the observed states at the tip (i.e., stochastic mapping) or not (i.e., forward simulation)
+#' @param trait Name of the discrete trait used in the tree file (e.g., "states")
+#' @return A phylo and simmap object (or a multiPhylo and multiSimmap object when nsim > 1) that contains the simulated full history
+#' @export
+#' @examples
+#' tree <- ape::rtree(7)
+#' Q <- matrix(c(-1, 1, 1, -1), ncol = 2, byrow = T)
+#' root_freq <- setNames(rep(0.5, 2), c("A", "B"))
+#' one_history <- sim_history(tree, Q, root_freq = root_freq, conditional = F)
+sim_history <- function(tree, Q, Q_ages = NULL, root_freq = NULL, nsim = 1L, conditional = F, trait = NULL) {
+  
+  # first some sanity checks
+  if (!inherits(tree, "phylo")) {
     stop("tree should be an object of class \"phylo\".")
-  if (hasArg(message)) 
-    message <- list(...)$message
-  else message <- TRUE
-  tree <- ape::reorder.phylo(tree, "cladewise")
-  if (!isSymmetric(Q)) 
-    if (message) 
-      cat("Note - the rate of substitution from i->j should be given by Q[j,i].\n")
-  if (!all(round(colSums(Q), 10) == 0)) {
-    if (all(round(rowSums(Q), 10) == 0) && !isSymmetric(Q)) {
-      if (message) {
-        cat("Detecting that rows, not columns, of Q sum to zero :\n")
-        cat("Transposing Q for internal calculations.\n")
-      }
-      Q <- t(Q)
-    }
-    else {
-      if (message) 
-        cat("Some columns (or rows) of Q don't sum to 0.0. Fixing.\n")
-      diag(Q) <- 0
-      diag(Q) <- -colSums(Q, na.rm = TRUE)
-    }
   }
-  if (is.null(dimnames(Q))) 
-    dimnames(Q) <- list(1:nrow(Q), 1:ncol(Q))
-  mtrees <- vector(mode = "list", length = nsim)
-  class(mtrees) <- c("multiSimmap", "multiPhylo")
-  if (is.null(anc)) 
-    anc <- setNames(rep(1/ncol(Q), ncol(Q)), colnames(Q))
-  if (is.character(anc)) {
-    anc <- colSums(to.matrix(anc, colnames(Q)))
-    anc <- anc/sum(anc)
-  }
-  for (i in 1:nsim) {
-    a <- phytools::rstate(anc)
-    mtree <- tree
-    mtree$maps <- vector(mode = "list", length = nrow(tree$edge))
-    node.states <- matrix(NA, nrow(tree$edge), ncol(tree$edge))
-    node.states[which(tree$edge[, 1] == (length(tree$tip) + 1)), 1] <- a
-    for (j in 1:nrow(tree$edge)) {
-      if (tree$edge.length[j] == 0) {
-        map <- vector()
-        map[1] <- tree$edge.length[j]
-        names(map)[1] <- node.states[which(tree$edge[, 1] == tree$edge[j, 2]), 1] <- node.states[j,2] <- node.states[j, 1]
+  
+  # config Q matrices and the interval time bounds
+  if (is.list(Q)) {
+    if (is.null(Q_ages) && length(Q) > 1) {
+      stop("multiple matrices but no information about how to arrange them chronologically.\n")
+    } else if (!is.null(Q_ages)) {
+      
+      if (all(Q_ages <= 0)) {
+        Q_ages <- -Q_ages
+      } else if (any(Q_ages < 0)) {
+        stop("Q times need to be either all non-negative or non-positive.\n")
       }
-      else {
-        time = 0
-        state <- node.states[j, 1]
-        new.state <- state
-        dt <- vector()
-        map <- vector()
-        k <- 1
-        while (time < tree$edge.length[j]) {
-          dt[1] <- time
-          
-          # customized edits from the original phytools version of sim.history to allow the matrix to be reducible
-          # i.e., Q matrix can have an entire row with zero implying the corresponding state to be an absorbing state
-          # this type of asymmetric Q matrix may have positive likelihood giving rise the data
-          if (Q[state, state] == 0) {
-            dt[2] <- Inf
-          } else {
-            dt[2] <- dt[1] + rexp(n = 1, rate = -Q[state, state])
-          }
-          
-          if (dt[2] < tree$edge.length[j]) new.state <- phytools::rstate(Q[, state][-match(state, rownames(Q))]/sum(Q[, state][-match(state, rownames(Q))]))
-          dt[2] <- min(dt[2], tree$edge.length[j])
-          map[k] <- dt[2] - dt[1]
-          names(map)[k] <- state
-          k <- k + 1
-          state <- new.state
-          time <- dt[2]
+      
+      if (length(Q) != length(Q_ages[Q_ages != 0]) + 1L) {
+        stop("number of matrices does not match the number of epoch time boundaries, which is supposed to be one fewer.\n")
+      }
+      
+      if (all(Q_ages != 0)) {
+        if (length(Q_ages) > 1 && identical(Q_ages, sort(Q_ages, decreasing = T))) {
+          Q_ages <- c(Q_ages, 0)
+        } else {
+          Q_ages <- c(0, Q_ages)
         }
-        node.states[which(tree$edge[, 1] == tree$edge[j, 2]), 1] <- node.states[j, 2] <- names(map)[length(map)]
       }
-      mtree$maps[[j]] <- map
+      
+      Q <- Q[order(Q_ages, decreasing = T)]
+      Q_ages <- sort(Q_ages, decreasing = T)
+      Q_ages <- Q_ages[-length(Q_ages)]
+      
     }
-    mtree$node.states <- node.states
-    tip.states <- node.states[tree$edge[, 2] <= length(tree$tip), 2]
-    tip.states <- tip.states[order(tree$edge[tree$edge[, 2] <= length(tree$tip), 2])]
-    names(tip.states) <- tree$tip.label
-    mtree$states <- tip.states
-    allstates <- vector()
-    for (j in 1:nrow(mtree$edge)) allstates <- c(allstates, names(mtree$maps[[j]]))
-    allstates <- unique(allstates)
-    mtree$mapped.edge <- matrix(data = 0, length(mtree$edge.length), 
-                                length(allstates), dimnames = list(apply(mtree$edge, 1, function(x) paste(x, collapse = ",")), state = allstates))
-    for (j in 1:length(mtree$maps)) for (k in 1:length(mtree$maps[[j]])) mtree$mapped.edge[j, names(mtree$maps[[j]])[k]] <- mtree$mapped.edge[j, names(mtree$maps[[j]])[k]] + mtree$maps[[j]][k]
-    class(mtree) <- c("simmap", setdiff(class(mtree), "simmap"))
-    mtrees[[i]] <- mtree
+  } else if (!is.matrix(Q)) {
+    stop("Q needs to be either a single matrix or a list of matrices.\n")
+  } else {
+    Q <- list(Q)
   }
-  if (nsim == 1) 
-    mtrees <- mtrees[[1]]
-  if (message) 
-    cat("Done simulation(s).\n")
-  mtrees
+  
+  nstates <- ncol(Q[[1]])
+  if (nstates < 2) {
+    stop("there has to be at least two states.\n")
+  }
+  
+  # we assume the state names can be found as either the row or column names of the Q matrix of or the name of the root frequency vector
+  states <- rownames(Q[[1]])
+  if (is.null(states)) {
+    states <- colnames(Q[[1]])
+    if (is.null(states)) {
+      if (!is.null(root_freq)) {
+        states <- names(root_freq)
+      }
+      if (is.null(states)) {
+        stop("state names are not assigned.\n")
+      }
+    }
+  }
+  
+  # sanity checks for Q matrix
+  for (i in 1:length(Q)) {
+    if (ncol(Q[[i]]) != nrow(Q[[i]])) {
+      stop("all matrices need to be square.\n")
+    }
+    if (ncol(Q[[i]]) != nstates) {
+      stop("all matrices need to have identical dimensions.\n")
+    }
+    if (!isTRUE(all.equal(as.numeric(apply(Q[[i]], 1, sum)), rep(0, nstates), tolerance = 1e-3))) {
+      stop("row of Q needs to sum to 0.\n")
+    }
+    if (any(Q[[i]][row(Q[[i]]) != col(Q[[i]])] < 0)) {
+      stop("off diagonal elements of Q needs to be non-negative.\n")
+    }
+    if (any(diag(Q[[i]]) > 0)) {
+      stop("diagonal elements of Q needs to be non-positive.\n")
+    }
+    if (all(diag(Q[[i]]) == 0)) {
+      stop("some elements in Q need to be positive.\n")
+    }
+  }
+  
+  if (conditional) {
+    return(sim_history_conditional(tree, Q, Q_ages, states, nsim, trait))
+  } else {
+    return(sim_history_unconditional(tree, Q, Q_ages, states, root_freq, nsim))
+  }
 }
 
 
-# given one tree file path and one log file path
+#' Simulate discrete-character histories using the inferred posterior distribution and compute posterior-predictive summary statistics using the simulated histories
+#' 
+#' @param states_dat A data-frame object containing at least two columns: one for the name of each tip (column name specified by \code{taxon_name}), 
+#' and the other for the trait state of each tip (column name specified by \code{discrete_trait_name}).
+#' @param taxon_name Name of the column containing tip names.
+#' @param discrete_trait_name Name of the column containing tip states.
+#' @param tree_path File path of the posterior distribution of trees that will be read in to simulated over.
+#' @param log_path File path of the posterior distribution of parameters whose values will be used in the simulation.
+#' @param simsamples_num Number of histories to simulate.
+#' @param simulated_outpath File path to write the simulated data to.
+#' @return A data-frame object that contains the simulated and observed values of the two summary statistics
+#' @export
+#' @examples 
+#' 
 historySimulator_teststatisticsComputer <- function (states_dat, taxon_name, discrete_trait_name, tree_path, log_path, 
-                                                     simsamples_num = 1000L, simulated_tmppath) {
+                                                     simsamples_num = 1000L, simulated_outpath) {
   
   # discrete trait information
   observed_tipstates <- states_dat[, discrete_trait_name]
@@ -239,7 +258,7 @@ historySimulator_teststatisticsComputer <- function (states_dat, taxon_name, dis
       }
     }
 
-    history <- sim.history2(tree = tree, Q = Q, anc = root_freqs, nsim = 1, message = F)
+    history <- sim_history(tree = tree, Q = Q, root_freq = root_freqs, nsim = 1L, conditional = F)
     
     # write tip state to a file so it can be reused
     # need to delete it as the end
@@ -267,7 +286,7 @@ historySimulator_teststatisticsComputer <- function (states_dat, taxon_name, dis
   simulated_dataset <- data.frame(cbind(simulated_sampleidx, simulated_tipstates_all), stringsAsFactors = F)
   colnames(simulated_dataset) <- c("sample_index", tip_names)
 
-  write.table(simulated_dataset, file = simulated_tmppath, quote = F, sep = "\t", row.names = F)
+  write.table(simulated_dataset, file = simulated_outpath, quote = F, sep = "\t", row.names = F)
   
   teststatistics_df <- data.frame(cbind(simulated_sampleidx, observed_parsimonyscore, simulated_parsimonyscore, 
                                         rep(observed_multinomiallikelihood, length(simulated_multinomiallikelihood)), simulated_multinomiallikelihood), stringsAsFactors = F)

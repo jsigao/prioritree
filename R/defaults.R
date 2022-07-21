@@ -1,8 +1,4 @@
 
-options(warn = -1)
-options(shiny.maxRequestSize = 16384*1024^2)
-options(shiny.reactlog = T)
-
 .pkg_env = new.env(parent = emptyenv())
 assign("inputdefault_init", list(model_symmetry = "symmetric", with_bssvs = T, empiricaltree_mh = "Metropolis-Hastings algorithm (recommended)",
                                  delta_prior = "Poisson", poisson_default = F, poisson_lambda = 0.693,

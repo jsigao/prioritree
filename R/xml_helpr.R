@@ -1,15 +1,18 @@
 
-#' Add together two numbers
+#' Generate the data block in a BEAST XML file.
 #' 
 #' @param states_dat a data-frame object containing at least two columns: one for the name of each tip (column name specified by \code{taxon_name}), 
 #' and the other for the trait state of each tip (column name specified by \code{discrete_trait_name})
 #' @param taxon_name name of the column containing tip names
 #' @param discrete_trait_name name of the column containing tip states
-#' @param date_name
-#' @param lheat
-#' @param under_prior
-#' @return xml code
-
+#' @param date_name name of the column containing tip sampled dates
+#' @param lheat Number of data clones
+#' @param under_prior Whether to infer the joint prior distribution (default false) or the joint posterior distribution
+#' @return XML code specifying data usage
+#' 
+#' @example 
+#' xml_discretetraitdata(states_dat = states_dat, taxon_name = "taxon", discrete_trait_name = "geography")
+#' @export
 xml_discretetraitdata <- function(states_dat, taxon_name, discrete_trait_name, date_name = NULL, lheat = 1, under_prior = F) {
   
   states <- sort(as.vector(unique(states_dat[, discrete_trait_name])))
@@ -76,11 +79,38 @@ xml_discretetraitdata <- function(states_dat, taxon_name, discrete_trait_name, d
   return(paste0(taxa, general_datatype, pattern_alignment))
 }
 
-
-xml_discretetraitmodel <- function(states_dat, discrete_trait_name, symmetry = T, bssvs = T, delta_prior = "Poisson", 
+#' Generate the discrete-geography model block in a BEAST XML file.
+#' 
+#' @param states_dat a data-frame object containing at least two columns: one for the name of each tip (column name specified by \code{taxon_name}), 
+#' and the other for the trait state of each tip (column name specified by \code{discrete_trait_name})
+#' @param discrete_trait_name name of the column containing tip states
+#' @param symmetry Whether the specified geographic model is symmetric (true) or asymmetric (false)
+#' @param bssvs Whether Bayesian Stochastic Search Variable Selection (BSSVS) is used (default true) in the discrete-geographic model.
+#' @param delta_prior Which of the three prior options to put on \eqn{\Delta}, including:
+#' \itemize{
+#'   \item "Poisson": a(n offset) Poisson distribution (the default option);
+#'   \item "Uniform": a uniform distribution between zero and the maximum \eqn{\Delta} (when all the dispersal routes exist), and;
+#'   \item "Beta-Binomial": a Beta-Binomial distribution.
+#' }
+#' @param poisson_default Whether to specify the default Poisson prior in BEAUti.
+#' @param poisson_mean The rate parameter (\eqn{\lambda}) of the Poisson distribution.
+#' @param alpha_beta Parameter \eqn{\alpha} of the Beta-Binomial distribution.
+#' @param beta_beta Parameter \eqn{\beta} of the Beta-Binomial distribution.
+#' @param rates_proposal_weight Weight of the proposals on the pairwise rates of dispersal.
+#' @param indicators_proposal_weight Weight of the proposals on the indicator variables.
+#' @param rootfreq_proposal_weight Weight of the proposal on the root-frequency vector.
+#' @param indicatorprob_proposal_weight Weight of the proposal on the parameter that specifies the probability of each indicator being non-zero (only relevant when \code{delta_prior} is "Beta-Binomial").
+#' @return XML code specifying the discrete-geography model
+#' 
+#' @example 
+#' xml_discretetraitmodel(states_dat = states_dat, discrete_trait_name = "geography", delta_prior = "Poisson", poisson_mean = log(2))
+#' @export
+xml_discretetraitmodel <- function(states_dat, discrete_trait_name, symmetry = T, bssvs = T, delta_prior = c("Poisson", "Uniform", "Beta-Binomial"), 
                                    poisson_default = T, poisson_mean = 0, alpha_beta = 0, beta_beta = 0,
                                    rates_proposal_weight = 0, indicators_proposal_weight = 0, 
                                    rootfreq_proposal_weight = 0, indicatorprob_proposal_weight = 0) {
+  
+  delta_prior <- match.arg(delta_prior)
   
   states <- sort(as.vector(unique(states_dat[, discrete_trait_name])))
   states <- states[states != "?"]
@@ -225,11 +255,22 @@ xml_discretetraitmodel <- function(states_dat, discrete_trait_name, symmetry = T
   
 }
 
-
-xml_treemodel <- function(tree, treefile_name, tree_proposal_weight = 0, empiricaltree_mh = F) {
+#' Generate the tree-model block in a `BEAST` XML file.
+#' 
+#' @param tree A `phylo` object that contains a single tree
+#' @param treefile_name Path of the `.trees` file that contains the distribution of trees
+#' @param tree_proposal_weight Weight of the empirical tree operator (only becomes relevant when \code{treefile_name} is provided)
+#' @param empiricaltree_mh Whether treating the provided distribution of trees as part of the Markov chain (default true) or averaging over the distribution uniformly.
+#' @return XML code specifying the tree model
+#' 
+#' @example
+#' tree <- ape::read.tree()
+#' xml_treemodel(tree = tree)
+#' @export
+xml_treemodel <- function(tree = NULL, treefile_name = NULL, tree_proposal_weight = 0, empiricaltree_mh = F) {
   
   # tree distribution model chunk
-  if ("phylo" %in% class(tree)) { # a single tree
+  if ((!is.null(tree)) && "phylo" %in% class(tree)) { # a single tree
     
     tree$tip.label <- gsub("\'", "", tree$tip.label)
     tree_newick <- ape::write.tree(tree)
@@ -249,7 +290,7 @@ xml_treemodel <- function(tree, treefile_name, tree_proposal_weight = 0, empiric
                          "\t\t</nodeHeights>\n",
                          "\t</treeModel>\n")
     
-  } else { # multiple trees
+  } else if (!is.null(treefile_name)) { # multiple trees
     
     tree_model <- paste0("\t<empiricalTreeDistributionModel id=\"treeModel\" fileName=\"", treefile_name, "\">\n", 
                          "\t\t<taxa idref=\"taxa\"/>\n",
@@ -257,6 +298,8 @@ xml_treemodel <- function(tree, treefile_name, tree_proposal_weight = 0, empiric
                          "\t<statistic id=\"treeModel.currentTree\" name=\"Current Tree\">\n",
                          "\t\t<empiricalTreeDistributionModel idref=\"treeModel\"/>\n",
                          "\t</statistic>\n")
+  } else {
+    stop("cannot find tree.")
   }
   
   # tree proposal chunk
@@ -279,8 +322,21 @@ xml_treemodel <- function(tree, treefile_name, tree_proposal_weight = 0, empiric
   return(list(tree_model = tree_model, tree_proposal = tree_proposal, currentTree_output = currentTree_output))
 }
 
-
-xml_clockratemodel <- function(discrete_trait_name, ctmc = T, clockrate_mean = 1, clockrate_mean_stochastic = T, 
+#' Generate the average dispersal rate model block in a `BEAST` XML file.
+#' 
+#' @param discrete_trait_name name of the column containing tip states
+#' @param ctmc Whether to specify the CTMC-rate reference prior (default prior recommended by BEAUti) on the average dispersal rate
+#' @param clockrate_mean Mean of the Exponential prior on the average dispersal rate (relevant when an Exponential prior is used)
+#' @param clockrate_mean_stochastic Whether the mean of the Exponential prior should be treated as a random variable with a hyperprior (default true)
+#' @param clockrate_proposal_weight Weight of the proposal on the average dispersal rate
+#' @param clockratemean_proposal_weight Weight of the proposal on the mean of the Exponential prior on the average dispersal rate 
+#' @param clockrate_mean_gammashaperate Shape and rate parameter (assumed to be identical) of the Gamma hyperprior of the Hierarchical Exponential prior.
+#' @return XML code specifying the average dispersal rate model
+#' 
+#' @example
+#' xml_clockratemodel(discrete_trait_name = "geography", ctmc = F, clockrate_mean_stochastic = T, clockrate_proposal_weight = 15, clockratemean_proposal_weight = 1.5)
+#' @export
+xml_clockratemodel <- function(discrete_trait_name, ctmc = F, clockrate_mean = 1, clockrate_mean_stochastic = T, 
                                clockrate_proposal_weight = 1, clockratemean_proposal_weight = 1, clockrate_mean_gammashaperate = 0.5) {
   
   discretetrait_clock_rate <- paste0("\t<strictClockBranchRates id=\"", discrete_trait_name, ".branchRates\">\n",
@@ -307,7 +363,7 @@ xml_clockratemodel <- function(discrete_trait_name, ctmc = T, clockrate_mean = 1
     clock_rate_prior <- paste0("\t\t<gammaPrior shape=\"1.0\" scale=\"", clockrate_mean, "\" offset=\"0.0\">\n",
                                "\t\t\t<parameter idref=\"", discrete_trait_name, ".clock.rate\"/>\n", 
                                "\t\t</gammaPrior>\n")
-  } else if (clockrate_mean_stochastic) {
+  } else {
 
     clock_rate_prior <- paste0("\t\t<distributionLikelihood>\n",
                                "\t\t\t<distribution>\n",
@@ -335,8 +391,23 @@ xml_clockratemodel <- function(discrete_trait_name, ctmc = T, clockrate_mean = 1
 }
 
 
-
-xml_phyloctmc <- function(states_dat, discrete_trait_name, rootfreq_model, lheat = 1, symmetry = T, complete_history = F, do_totalcount = T, do_pairwisecount = T) {
+#' Generate the treeLikelihood block in a `BEAST` XML file.
+#' 
+#' @param states_dat a data-frame object containing at least two columns: one for the name of each tip (column name specified by \code{taxon_name}), 
+#' and the other for the trait state of each tip (column name specified by \code{discrete_trait_name})
+#' @param discrete_trait_name name of the column containing tip states
+#' @param rootfreq_model XML code specifying the root-frequency model (as one of the returned value of \code{xml_discretetraitmodel})
+#' @param lheat Number of data clones
+#' @param symmetry Whether the specified geographic model is symmetric (true) or asymmetric (false)
+#' @param complete_history Whether to perform stochastic mapping to simulate full histories of the discrete-geographic trait (default) or perform the "fast" stochastic mapping to compute the expected number of events on each branch
+#' @param do_totalcount Whether to compute the number of events among all discrete states (default true) or not.
+#' @param do_pairwisecount Whether to compute the number of events between each pair of discrete states (default true) or not.
+#' @return XML code specifying the treeLikelihood block
+#' 
+#' @example
+#' xml_phyloctmc(states_dat = states_dat, discrete_trait_name = "geography", rootfreq_model = xml_discretetraitmodel(states_dat = states_dat, discrete_trait_name = "geography", delta_prior = "Poisson", poisson_mean = log(2))$rootfreq_model)
+#' @export
+xml_phyloctmc <- function(states_dat, discrete_trait_name, rootfreq_model, lheat = 1, symmetry = T, complete_history = T, do_totalcount = T, do_pairwisecount = T) {
   
   states <- sort(as.vector(unique(states_dat[, discrete_trait_name])))
   states <- states[states != "?"]
@@ -409,10 +480,38 @@ xml_phyloctmc <- function(states_dat, discrete_trait_name, rootfreq_model, lheat
   return(markov_jumps)
 }
 
-
-xml_monitors <- function(discrete_trait_name, currentTree_output, file_name, bssvs = T, complete_history = F, lheat = 1,
-                         ctmc = T, clockrate_mean_stochastic = F, symmetry = T, delta_prior = "Poisson", 
+#' Generate the monitor block in a `BEAST` XML file.
+#' 
+#' @param discrete_trait_name name of the column containing tip states
+#' @param currentTree_output tree indices output chunk in the XML (as one of the returned value of \code{xml_treemodel})
+#' @param filename Name of the output file (without file extension)
+#' @param bssvs Whether Bayesian Stochastic Search Variable Selection (BSSVS) is used (default true) in the discrete-geographic model.
+#' @param complete_history Whether to perform stochastic mapping to simulate full histories of the discrete-geographic trait (default) or perform the "fast" stochastic mapping to compute the expected number of events on each branch
+#' @param lheat Number of data clones
+#' @param ctmc Whether to specify the CTMC-rate reference prior (default prior recommended by BEAUti) on the average dispersal rate
+#' @param clockrate_mean_stochastic Whether the mean of the Exponential prior should be treated as a random variable with a hyperprior (default true)
+#' @param symmetry Whether the specified geographic model is symmetric (true) or asymmetric (false)
+#' @param delta_prior Which of the three prior options to put on \eqn{\Delta}, including:
+#' \itemize{
+#'   \item "Poisson": a(n offset) Poisson distribution (the default option);
+#'   \item "Uniform": a uniform distribution between zero and the maximum \eqn{\Delta} (when all the dispersal routes exist), and;
+#'   \item "Beta-Binomial": a Beta-Binomial distribution.
+#' }
+#' @param under_prior Whether to infer the joint prior distribution (default false) or the joint posterior distribution
+#' @param mcmc_samplingfreq Every number of MCMC generations to log to the output
+#' @param ml_numstones Number of powers ("stones") to use in the power-posterior analysis.
+#' @param ml_chainlengthperstone Number of generations to run per stone.
+#' @param ml_samplingfreq Every number of generations to log to the output.
+#' @param ml_alphaofbeta Alpha of the Beta distribution that decides where to put the stones.
+#' @return XML code specifying the monitor block
+#' 
+#' @example
+#' xml_monitors(discrete_trait_name = "geography", currentTree_output = xml_treemodel(tree = tree)$currentTree_output, file_name = "mcmc")
+#' @export
+xml_monitors <- function(discrete_trait_name, currentTree_output, file_name, bssvs = T, complete_history = T, lheat = 1,
+                         ctmc = T, clockrate_mean_stochastic = T, symmetry = T, delta_prior = c("Poisson", "Uniform", "Beta-Binomial"), 
                          under_prior = F, mcmc_samplingfreq = 1, ml_numstones = 0, ml_chainlengthperstone = 0, ml_samplingfreq = 0, ml_alphaofbeta = 0.3) {
+  delta_prior <- match.arg(delta_prior)
   
   nonZeroRates_screenlog <- ""
   if (bssvs) {

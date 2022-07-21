@@ -1,4 +1,5 @@
 
+#' @keywords internal
 readtreefile_linebyline <- function(filepath, earlystop = T) {
   con = file(filepath, "r")
   lines <- NULL
@@ -19,6 +20,7 @@ readtreefile_linebyline <- function(filepath, earlystop = T) {
 }
 
 
+#' @keywords internal
 parsimonyscore_treebytree <- function(filepath, tree = NULL, tipstates, states, firsttree_only = T) {
   
   if (firsttree_only && (!is.null(tree))) {
@@ -49,6 +51,7 @@ parsimonyscore_treebytree <- function(filepath, tree = NULL, tipstates, states, 
 }
 
 
+#' @keywords internal
 getDifferedLines <- function(last_txt = NULL, current_txt = NULL, file_ext = ".txt") {
   
   dataline_str <- ""
