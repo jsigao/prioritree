@@ -2798,6 +2798,7 @@ run_app <- function() {
       shiny::req(input$taxoncolumn_name)
       shiny::req(tree_values$tree)
       shiny::req(states_dat())
+      shiny::req(input$further_analysis)
       
       analysis_text$html <- tex_analysis(further_analysis = input$further_analysis, posterioranalysis_text = posterioranalysis_text$html, 
                                          summarystats_text = summarystats_text$html, powerposterior_text = powerposterior_text$html, 
