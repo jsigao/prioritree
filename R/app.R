@@ -154,7 +154,7 @@ run_app <- function() {
                                                                                                                               shiny::tabPanel(title = "Model Exploration",
                                                                                                                                               shiny::h6(""),
                                                                                                                                               shiny::selectInput(inputId = "further_analysis", label = "Setting up further analysis for model exploration", 
-                                                                                                                                                                 choices = c(Choose = '', "Marginal likelihood estimation", "Under prior", "Data cloning"), 
+                                                                                                                                                                 choices = c(Choose = "", "Marginal likelihood estimation", "Under prior", "Data cloning"), 
                                                                                                                                                                  multiple = F, selectize = F),
                                                                                                                                               shiny::uiOutput("furtheranalysis_ui")
                                                                                                                               )
@@ -2697,7 +2697,7 @@ run_app <- function() {
       shiny::req(states_dat())
       
       do_totalcount <- do_pairwisecount <- F
-      if ((!is.null(input$do_stochasticmapping)) && input$do_stochasticmapping != "") {
+      if ((!is.null(input$do_stochasticmapping))) {
         do_totalcount <- input$markovjumps_total
         do_pairwisecount <- input$markovjumps_pairwise
         
@@ -2798,7 +2798,7 @@ run_app <- function() {
       shiny::req(input$taxoncolumn_name)
       shiny::req(tree_values$tree)
       shiny::req(states_dat())
-      shiny::req(input$further_analysis)
+      shiny::req(!is.null(input$further_analysis))
       
       analysis_text$html <- tex_analysis(further_analysis = input$further_analysis, posterioranalysis_text = posterioranalysis_text$html, 
                                          summarystats_text = summarystats_text$html, powerposterior_text = powerposterior_text$html, 

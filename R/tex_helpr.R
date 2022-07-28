@@ -541,9 +541,8 @@ tex_posterioranalysis <- function(mcmc_chainlength = 1, mcmc_samplingfreq = 1, m
 #' @examples
 #' tex_summarystats("Stochastic mapping (complete history, simulation-based)", T, T)
 #' @keywords internal
-tex_summarystats <- function(do_stochasticmapping = c("Stochastic mapping (complete history, simulation-based)", "Fast stochastic mapping (incomplete history, simulation-free)"),
+tex_summarystats <- function(do_stochasticmapping = "",
                              markovjumps_total = T, markovjumps_pairwise = T, format = c("HTML", "Latex", "Markdown"), render_citation = T) {
-  do_stochasticmapping <- match.arg(do_stochasticmapping)
   format <- match.arg(format)
   
   format_idx <- which(.pkg_env$tex_helprs$all_format == format)
@@ -728,10 +727,9 @@ tex_dcanalysis <- function(lheat = 1, mcmc_chainlength = 1, mcmc_samplingfreq = 
 #' powerposterior_text <- tex_powerposterior(64, 500000, 1000, 0.3, 2)
 #' tex_analysis(further_analysis = "Marginal likelihood estimation", posterioranalysis_text = posterioranalysis_text, summarystats_text = summarystats_text, powerposterior_text = powerposterior_text)
 #' @keywords internal
-tex_analysis <- function(further_analysis = c("", "Marginal likelihood estimation", "Under prior", "Data cloning"), posterioranalysis_text = "", 
+tex_analysis <- function(further_analysis = "", posterioranalysis_text = "", 
                          summarystats_text = "", powerposterior_text = "", prioranalysis_text = "", dcanalysis_text = "", format = c("HTML", "Latex", "Markdown")) {
   
-  further_analysis <- match.arg(further_analysis)
   format <- match.arg(format)
   
   format_idx <- which(.pkg_env$tex_helprs$all_format == format)
