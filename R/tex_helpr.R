@@ -15,7 +15,7 @@
 #' @return an R markdown paragraph describing the specified prior on the number of dispersal routes, \eqn{\Delta}.
 #' 
 #' @examples
-#' description_deltaprior(5L, T, "Poisson", T)
+#' description_deltaprior(5L, TRUE, "Poisson", TRUE)
 #' @keywords internal
 description_deltaprior <- function(states_num, symmetry = T, delta_prior = c("Poisson", "Uniform", "Beta-Binomial"), poisson_default = T, poisson_lambda = 0, 
                                    alpha_beta = 1, beta_beta = 1) {
@@ -197,7 +197,7 @@ tex_data <- function(taxa_num = 1, states_num = 1, format = c("HTML", "Latex", "
 #' @return a paragraph (in the selected format) describing the model specified in the study.
 #' 
 #' @examples
-#' tex_model(T, T, "Markdown", T)
+#' tex_model(TRUE, TRUE, "Markdown", TRUE)
 #' @keywords internal
 tex_model <- function(bssvs = T, symmetry = T, format = c("HTML", "Latex", "Markdown"), render_citation = T) {
   
@@ -266,7 +266,7 @@ tex_model <- function(bssvs = T, symmetry = T, format = c("HTML", "Latex", "Mark
 #' @return a paragraph (in the selected format) describing the prior on the number of dispersal routes specified in the study.
 #' 
 #' @examples
-#' tex_deltaprior(states_num = 5L, symmetry = T, delta_prior = "Poisson", poisson_default = T, poisson_lambda = log(2))
+#' tex_deltaprior(states_num = 5L, symmetry = TRUE, delta_prior = "Poisson", poisson_default = TRUE, poisson_lambda = log(2))
 #' @keywords internal
 tex_deltaprior <- function(states_num, symmetry = T, delta_prior = c("Poisson", "Uniform", "Beta-Binomial"), poisson_default = T, poisson_lambda = 0,
                            alpha_beta = 1, beta_beta = 1, format = c("HTML", "Latex", "Markdown"), render_citation = T) {
@@ -426,7 +426,7 @@ tex_muprior <- function(mu_prior = c("CTMC rate-ref (BEAST default)", "Hierarchi
 #' @return paragraphs (in the selected format) describing prior specification in the study
 #' 
 #' @examples
-#' deltaprior_text <- tex_deltaprior(states_num = 5L, symmetry = T, delta_prior = "Poisson", poisson_default = T, format = "Markdown")
+#' deltaprior_text <- tex_deltaprior(states_num = 5L, symmetry = TRUE, delta_prior = "Poisson", poisson_default = TRUE, format = "Markdown")
 #' muprior_text <- tex_muprior(mu_prior = "CTMC rate-ref (BEAST default)", tree_length = 1000, tree_num = 1L, parsimony_score = 500L)
 #' tex_prior(deltaprior_text, muprior_text, "HTML")
 tex_prior <- function(deltaprior_text, muprior_text, format = c("HTML", "Latex", "Markdown")) {
@@ -448,7 +448,7 @@ tex_prior <- function(deltaprior_text, muprior_text, format = c("HTML", "Latex",
 #' @return a paragraph (in the selected format) describing the Bayesian inference procedure used in the study.
 #' 
 #' @examples
-#' tex_bayesianinference(T, 1, T)
+#' tex_bayesianinference(TRUE, 1, TRUE)
 #' @keywords internal
 tex_bayesianinference <- function(empiricaltree_mh = T, tree_num = 1, bssvs = T, format = c("HTML", "Latex", "Markdown"), render_citation = T) {
   format <- match.arg(format)
@@ -539,7 +539,7 @@ tex_posterioranalysis <- function(mcmc_chainlength = 1, mcmc_samplingfreq = 1, m
 #' @return a paragraph (in the selected format) describing the geographic history inference in the study.
 #' 
 #' @examples
-#' tex_summarystats("Stochastic mapping (complete history, simulation-based)", T, T)
+#' tex_summarystats("Stochastic mapping (complete history, simulation-based)", TRUE, TRUE)
 #' @keywords internal
 tex_summarystats <- function(do_stochasticmapping = "",
                              markovjumps_total = T, markovjumps_pairwise = T, format = c("HTML", "Latex", "Markdown"), render_citation = T) {

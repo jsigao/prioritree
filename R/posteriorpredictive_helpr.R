@@ -12,9 +12,9 @@
 #' @export
 #' @examples
 #' tree <- ape::rtree(7)
-#' Q <- matrix(c(-1, 1, 1, -1), ncol = 2, byrow = T)
+#' Q <- matrix(c(-1, 1, 1, -1), ncol = 2, byrow = TRUE)
 #' root_freq <- setNames(rep(0.5, 2), c("A", "B"))
-#' one_history <- sim_history(tree, Q, root_freq = root_freq, conditional = F)
+#' one_history <- sim_history(tree, Q, root_freq = root_freq, conditional = FALSE)
 sim_history <- function(tree, Q, Q_ages = NULL, root_freq = NULL, nsim = 1L, conditional = F, trait = NULL) {
   
   # first some sanity checks

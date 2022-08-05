@@ -2,7 +2,7 @@
 % Please edit documentation in R/xml_helpr.R
 \name{xml_discretetraitdata}
 \alias{xml_discretetraitdata}
-\title{Add together two numbers}
+\title{Generate the data block in a BEAST XML file.}
 \usage{
 xml_discretetraitdata(
   states_dat,
@@ -20,10 +20,16 @@ and the other for the trait state of each tip (column name specified by \code{di
 \item{taxon_name}{name of the column containing tip names}
 
 \item{discrete_trait_name}{name of the column containing tip states}
+
+\item{date_name}{name of the column containing tip sampled dates}
+
+\item{lheat}{Number of data clones}
+
+\item{under_prior}{Whether to infer the joint prior distribution (default false) or the joint posterior distribution}
 }
 \value{
-xml code
+XML code specifying data usage
 }
 \description{
-Add together two numbers
+Generate the data block in a BEAST XML file.
 }

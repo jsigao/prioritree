@@ -334,7 +334,7 @@ xml_treemodel <- function(tree = NULL, treefile_name = NULL, tree_proposal_weigh
 #' @return XML code specifying the average dispersal rate model
 #' 
 #' @example
-#' xml_clockratemodel(discrete_trait_name = "geography", ctmc = F, clockrate_mean_stochastic = T, clockrate_proposal_weight = 15, clockratemean_proposal_weight = 1.5)
+#' xml_clockratemodel(discrete_trait_name = "geography", ctmc = FALSE, clockrate_mean_stochastic = TRUE, clockrate_proposal_weight = 15, clockratemean_proposal_weight = 1.5)
 #' @export
 xml_clockratemodel <- function(discrete_trait_name, ctmc = F, clockrate_mean = 1, clockrate_mean_stochastic = T, 
                                clockrate_proposal_weight = 1, clockratemean_proposal_weight = 1, clockrate_mean_gammashaperate = 0.5) {

@@ -10,7 +10,7 @@
 #' @export
 #' @examples
 #' tree <- ape::rtree(7)
-#' Q <- list(matrix(c(-1, 1, 1, -1), ncol = 2, byrow = T))
+#' Q <- list(matrix(c(-1, 1, 1, -1), ncol = 2, byrow = TRUE))
 #' states <- c("A", "B")
 #' root_freq <- setNames(rep(0.5, 2), c("A", "B"))
 #' one_history <- sim_history_unconditional(tree, Q, states = states, root_freq = root_freq)
@@ -230,7 +230,7 @@ sim_history_unconditional <- function(tree, Q, Q_ages = NULL, states, root_freq 
 #' @examples 
 #' \dontrun{
 #' tree <- ape::rtree(7)
-#' Q <- list(matrix(c(-1, 1, 1, -1), ncol = 2, byrow = T))
+#' Q <- list(matrix(c(-1, 1, 1, -1), ncol = 2, byrow = TRUE))
 #' states <- c("A", "B")
 #' one_history <- sim_history_conditional(tree, Q, states = states)
 #' # todo: add a tree to data file
@@ -339,12 +339,10 @@ sim_history_conditional <- function(tree, Q, Q_ages = NULL, states, nsim = 1L, t
 #' @param Q An instantaneous-rate matrix (or a list of matrices for a piecewise constant geographic model) characterizes the CTMC
 #' @param Q_ages A vector containing boundaries of time intervals for a piecewise constant geographic model (NULL means a constant model);
 #' the length of this vector should be one shorter than the Q-matrix list, sorted from oldest to youngest.
-#' @param node_state_indices State indices (i.e., the indices to use to fecth the states from the states vector) pf the start and end nodes
+#' @param node_state_indices State indices (i.e., the indices to use to fecth the states from the states vector) of the start and end nodes
 #' @param states States of the discrete character
 #' @return A map object (as in the simmap data structure) that contains the simulated history (as a series of events) over this branch
 #' @export
-#' @examples
-#' sim_history_branch_conditional(node_ages, Q, node_state_indices = node_state_indices, states = states)
 sim_history_branch_conditional <- function(node_ages, Q, Q_ages = NULL, node_state_indices, states) {
   
   # we first compute P matrix for each piece (defined by time intervals) of the branch
@@ -443,9 +441,7 @@ sim_history_branch_conditional <- function(node_ages, Q, Q_ages = NULL, node_sta
 #' @param P The transition probability matrix computed from the Q matrix (if not provided then it will be computed in this function)
 #' @param node_state_indices State indices (i.e., the indices to use to fecth the states from the states vector) pf the start and end nodes
 #' @return A list containing two vectors, one for the end state of each event over this duration and other for the age of each event
-#' @export
-#' @examples
-#' sim_history_piece_conditional(node_ages, Q, node_state_indices = node_state_indices)
+#' @keywords internal
 sim_history_piece_conditional <- function(node_ages, Q, Q_ages = NULL, P = NULL, node_state_indices) {
   
   # first find interval
@@ -574,9 +570,7 @@ draw_nevents_conditional <- function(node_ages, Q, Q_ages = NULL, node_state_ind
   repeat {
     fill_DTMCmats(Q, n, indices = idx)
     cum_prob <- cum_prob + dpois(n, .pkg_env$mu[idx] * t) * .pkg_env$R[[idx]][[n + 1]][node_state_indices[1], node_state_indices[2]] / Pab
-    if (cum_prob >= u) {
-      break
-    }
+    if (cum_prob >= u) break
     n <- n + 1L
   }
   
