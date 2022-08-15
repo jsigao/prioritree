@@ -1,4 +1,4 @@
-Package: prioritree
+Package: PrioriTree
 Type: Package
 Version: 0.0.0
 Authors@R: c(person("Jiansi", "Gao", email = "jsigao@ucdavis.edu", role = c("aut", "cre")),
@@ -9,7 +9,7 @@ Maintainer: Jiansi Gao <jsigao@ucdavis.edu>
 Depends: R (>= 3.2.0), shiny
 Imports: shinyjs, rmutil, rmarkdown, DT, 
     ape, phytools, phangorn, RColorBrewer, scales, expm
-Title: An Interactive Tool for Specifying Priors in Biogeographic Phylodynamic Analyses and Assessing Their Impact
+Title: A utility for improving phylodynamic analyses in BEAST
 Description: PrioriTree is motivated by properties of the discrete-biogeographic models implemented in BEAST and issues with the commonly used default priors in BEAST, identified by Gao et al. (2022).
     PrioriTree allows users to specify priors on the discrete-biogeographic model parameters in a biologically informed way (e.g., specifying the prior on the average dispersal rate by expressing understanding on the expected number of pathogen dispersal events over the entire epidemic history).
     The program also allows users to specify these prior assumptions in an interactive manner; it dynamically visualizes the resulting prior distribution according to users' specification in real time.
