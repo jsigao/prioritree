@@ -9,6 +9,6 @@ launchPrioriTree <- function() {
   options(shiny.maxRequestSize = 16384*1024^3)
   
   # Create Shiny app
-  appDir <- system.file("app", package = "prioritree")
+  appDir <- system.file("app", package = "PrioriTree")
   shiny::runApp(appDir, display.mode = "normal")
 }

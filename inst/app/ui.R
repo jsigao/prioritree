@@ -72,10 +72,10 @@ ui <- shiny::fluidPage(
                                                                                                                             shiny::tabPanel(title = "Geographic Model",
                                                                                                                                             shiny::h6(""),
                                                                                                                                             shiny::radioButtons(inputId = "model_symmetry", label = "Rate-Matrix Symmetry", choices = c("symmetric", "asymmetric"), 
-                                                                                                                                                                selected = prioritree:::.pkg_env$inputdefault_init$model_symmetry, inline = T),
+                                                                                                                                                                selected = PrioriTree:::.pkg_env$inputdefault_init$model_symmetry, inline = T),
                                                                                                                                             
                                                                                                                                             shiny::h3(""),
-                                                                                                                                            shiny::checkboxInput(inputId = "with_bssvs", label = "Infer dispersal routes using BSSVS", value = prioritree:::.pkg_env$inputdefault_init$with_bssvs)),
+                                                                                                                                            shiny::checkboxInput(inputId = "with_bssvs", label = "Infer dispersal routes using BSSVS", value = PrioriTree:::.pkg_env$inputdefault_init$with_bssvs)),
                                                                                                                             shiny::tabPanel(title = "Tree Model",
                                                                                                                                             shiny::h6(""),
                                                                                                                                             shiny::uiOutput("treemodel_ui")
@@ -94,15 +94,15 @@ ui <- shiny::fluidPage(
                                                                                                                             shiny::tabPanel(title = "MCMC Sampling", value = "mcmcsampling",
                                                                                                                                             shiny::h6(""),
                                                                                                                                             shiny::numericInput(inputId = "mcmc_chainlength", label = "MCMC chain length", 
-                                                                                                                                                                value = prioritree:::.pkg_env$inputdefault_init$mcmc_chainlength, min = 1),
+                                                                                                                                                                value = PrioriTree:::.pkg_env$inputdefault_init$mcmc_chainlength, min = 1),
                                                                                                                                             
                                                                                                                                             shiny::h5(""),
                                                                                                                                             shiny::numericInput(inputId = "mcmc_samplingfreq", label = "Sampling frequency of the MCMC chain", 
-                                                                                                                                                                value = prioritree:::.pkg_env$inputdefault_init$mcmc_samplingfreq, min = 1),
+                                                                                                                                                                value = PrioriTree:::.pkg_env$inputdefault_init$mcmc_samplingfreq, min = 1),
                                                                                                                                             
                                                                                                                                             shiny::h4(""),
                                                                                                                                             shiny::numericInput(inputId = "mcmc_numreplicates", label = "Number of analysis replicates", 
-                                                                                                                                                                value = prioritree:::.pkg_env$inputdefault_init$mcmc_numreplicates, min = 1)
+                                                                                                                                                                value = PrioriTree:::.pkg_env$inputdefault_init$mcmc_numreplicates, min = 1)
                                                                                                                             ),
                                                                                                                             
                                                                                                                             shiny::tabPanel(title = "Proposal Weights", value = "proposalweights",
@@ -762,7 +762,7 @@ ui <- shiny::fluidPage(
                     
                     shiny::tabPanel(title = "About", value = "about",
                                     shiny::fluidRow(
-                                      shiny::includeMarkdown(paste0(system.file("extdata/", package = "prioritree"), "/tool_input/about.md"))
+                                      shiny::includeMarkdown(paste0(system.file("extdata/", package = "PrioriTree"), "/tool_input/about.md"))
                                     ))
   )
 )

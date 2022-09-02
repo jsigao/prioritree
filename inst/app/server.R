@@ -1,20 +1,20 @@
 # Define server logic
 server <- function(input, output, session) {
   
-  extdata_path <- system.file("extdata/", package = "prioritree")
+  extdata_path <- system.file("extdata/", package = "PrioriTree")
   literature_bib_path <- paste0(extdata_path, "tool_input/literature.bib")
   file.copy(literature_bib_path, paste0(tempdir(), "/literature.bib"))
   
   # setting default input values
-  input_default <- shiny::reactiveValues(model_symmetry = prioritree:::.pkg_env$inputdefault_init$model_symmetry, with_bssvs = prioritree:::.pkg_env$inputdefault_init$with_bssvs, empiricaltree_mh = prioritree:::.pkg_env$inputdefault_init$empiricaltree_mh,
-                                         delta_prior = prioritree:::.pkg_env$inputdefault_init$delta_prior, poisson_default = prioritree:::.pkg_env$inputdefault_init$poisson_default, poisson_lambda = prioritree:::.pkg_env$inputdefault_init$poisson_lambda,
-                                         mu_prior = prioritree:::.pkg_env$inputdefault_init$mu_prior, alphaofgamma_mumean = prioritree:::.pkg_env$inputdefault_init$alphaofgamma_mumean,
-                                         proposalweight_r = prioritree:::.pkg_env$inputdefault_init$proposalweight_r, proposalweight_delta = prioritree:::.pkg_env$inputdefault_init$proposalweight_delta, 
-                                         proposalweight_rootfreq = prioritree:::.pkg_env$inputdefault_init$proposalweight_rootfreq, 
-                                         proposalweight_pdeltaij = prioritree:::.pkg_env$inputdefault_init$proposalweight_pdeltaij, proposalweight_mu = prioritree:::.pkg_env$inputdefault_init$proposalweight_mu, 
-                                         proposalweight_mumean = prioritree:::.pkg_env$inputdefault_init$proposalweight_mumean, proposalweight_tree = prioritree:::.pkg_env$inputdefault_init$proposalweight_tree,
-                                         mcmc_chainlength = prioritree:::.pkg_env$inputdefault_init$mcmc_chainlength, mcmc_samplingfreq = prioritree:::.pkg_env$inputdefault_init$mcmc_samplingfreq, 
-                                         mcmc_numreplicates = prioritree:::.pkg_env$inputdefault_init$mcmc_numreplicates)
+  input_default <- shiny::reactiveValues(model_symmetry = PrioriTree:::.pkg_env$inputdefault_init$model_symmetry, with_bssvs = PrioriTree:::.pkg_env$inputdefault_init$with_bssvs, empiricaltree_mh = PrioriTree:::.pkg_env$inputdefault_init$empiricaltree_mh,
+                                         delta_prior = PrioriTree:::.pkg_env$inputdefault_init$delta_prior, poisson_default = PrioriTree:::.pkg_env$inputdefault_init$poisson_default, poisson_lambda = PrioriTree:::.pkg_env$inputdefault_init$poisson_lambda,
+                                         mu_prior = PrioriTree:::.pkg_env$inputdefault_init$mu_prior, alphaofgamma_mumean = PrioriTree:::.pkg_env$inputdefault_init$alphaofgamma_mumean,
+                                         proposalweight_r = PrioriTree:::.pkg_env$inputdefault_init$proposalweight_r, proposalweight_delta = PrioriTree:::.pkg_env$inputdefault_init$proposalweight_delta, 
+                                         proposalweight_rootfreq = PrioriTree:::.pkg_env$inputdefault_init$proposalweight_rootfreq, 
+                                         proposalweight_pdeltaij = PrioriTree:::.pkg_env$inputdefault_init$proposalweight_pdeltaij, proposalweight_mu = PrioriTree:::.pkg_env$inputdefault_init$proposalweight_mu, 
+                                         proposalweight_mumean = PrioriTree:::.pkg_env$inputdefault_init$proposalweight_mumean, proposalweight_tree = PrioriTree:::.pkg_env$inputdefault_init$proposalweight_tree,
+                                         mcmc_chainlength = PrioriTree:::.pkg_env$inputdefault_init$mcmc_chainlength, mcmc_samplingfreq = PrioriTree:::.pkg_env$inputdefault_init$mcmc_samplingfreq, 
+                                         mcmc_numreplicates = PrioriTree:::.pkg_env$inputdefault_init$mcmc_numreplicates)
   
   # the default value of the poisson lambda depends on the number of states and the symmetry of the matrix
   shiny::observe({
@@ -623,7 +623,7 @@ server <- function(input, output, session) {
     
     par(lend = 2, mai = c(0.4, 0.01, 0.01, 0.01))
     plot(NA, xlim = rev(c(0, 1)), ylim = c(-0.01, 0.01), xaxt = "n", yaxt = "n", type = "n", xlab = NA, ylab = NA, bty = "n")
-    points(x = powers, y = rep(0, length(powers)), col = prioritree:::.pkg_env$mycolorpalette[5], pch = 4, cex = 0.65)
+    points(x = powers, y = rep(0, length(powers)), col = PrioriTree:::.pkg_env$mycolorpalette[5], pch = 4, cex = 0.65)
     
     axis(side = 1, labels = NA, lwd = 1, lwd.ticks = 1, tcl = -0.25)
     axis(side = 1, lwd = 0, lwd.ticks = 0, cex.axis = 1, line = -1)
@@ -3364,9 +3364,9 @@ server <- function(input, output, session) {
         for (j in 1:length(powers)) {
           
           if (powers[j] == 1) {
-            col <- prioritree:::.pkg_env$mycolorpalette[5]
+            col <- PrioriTree:::.pkg_env$mycolorpalette[5]
           } else if (powers[j] == 0) {
-            col <- prioritree:::.pkg_env$mycolorpalette[4]
+            col <- PrioriTree:::.pkg_env$mycolorpalette[4]
           } else {
             col <- "#A6ACAF"
           }
@@ -3517,9 +3517,9 @@ server <- function(input, output, session) {
         for (j in 1:length(powers)) {
           
           if (powers[j] == 1) {
-            col <- prioritree:::.pkg_env$mycolorpalette[5]
+            col <- PrioriTree:::.pkg_env$mycolorpalette[5]
           } else if (powers[j] == 0) {
-            col <- prioritree:::.pkg_env$mycolorpalette[4]
+            col <- PrioriTree:::.pkg_env$mycolorpalette[4]
           } else {
             col <- "#A6ACAF"
           }
@@ -4476,9 +4476,9 @@ server <- function(input, output, session) {
         for (j in 1:length(powers)) {
           
           if (powers[j] == 1) {
-            col <- prioritree:::.pkg_env$mycolorpalette[5]
+            col <- PrioriTree:::.pkg_env$mycolorpalette[5]
           } else if (powers[j] == 0) {
-            col <- prioritree:::.pkg_env$mycolorpalette[4]
+            col <- PrioriTree:::.pkg_env$mycolorpalette[4]
           } else {
             col <- "#A6ACAF"
           }
@@ -4605,9 +4605,9 @@ server <- function(input, output, session) {
         for (j in 1:length(powers)) {
           
           if (powers[j] == 1) {
-            col <- prioritree:::.pkg_env$mycolorpalette[5]
+            col <- PrioriTree:::.pkg_env$mycolorpalette[5]
           } else if (powers[j] == 0) {
-            col <- prioritree:::.pkg_env$mycolorpalette[4]
+            col <- PrioriTree:::.pkg_env$mycolorpalette[4]
           } else {
             col <- "#A6ACAF"
           }
@@ -5727,9 +5727,9 @@ server <- function(input, output, session) {
         for (j in 1:length(powers)) {
           
           if (powers[j] == 1) {
-            col <- prioritree:::.pkg_env$mycolorpalette[5]
+            col <- PrioriTree:::.pkg_env$mycolorpalette[5]
           } else if (powers[j] == 0) {
-            col <- prioritree:::.pkg_env$mycolorpalette[4]
+            col <- PrioriTree:::.pkg_env$mycolorpalette[4]
           } else {
             col <- "#A6ACAF"
           }
@@ -5857,9 +5857,9 @@ server <- function(input, output, session) {
         for (j in 1:length(powers)) {
           
           if (powers[j] == 1) {
-            col <- prioritree:::.pkg_env$mycolorpalette[5]
+            col <- PrioriTree:::.pkg_env$mycolorpalette[5]
           } else if (powers[j] == 0) {
-            col <- prioritree:::.pkg_env$mycolorpalette[4]
+            col <- PrioriTree:::.pkg_env$mycolorpalette[4]
           } else {
             col <- "#A6ACAF"
           }
