@@ -1,16 +1,16 @@
-# PrioriTree: Setting up BEAST Discrete-Geographic Analyses with Visualized Priors and Assessing Their Impact
+# PrioriTree: a utility for improving geographic phylodynamic analyses in BEAST
 An interactive web utility to help researchers specify priors in input files for---and process output files from---analyses of discrete biogeographic history performed using the `BEAST`.
 
 ## Manual
 A manual of `PrioriTree` can be found at https://bookdown.org/jsigao/prioritree_manual/.
-See the [`Quick Start`](https://bookdown.org/jsigao/prioritree_manual/quick-start.html) section in the manual for basic introduction to the program to get started, and refer to the [`More Thorough Guide`](https://bookdown.org/jsigao/prioritree_manual/thorough-guide.html) section there for more detailed explanation and additional features of the program.
+See the [`Quick Start`](https://bookdown.org/jsigao/prioritree_manual/quick-start.html) section in the manual for basic introduction to the program to get started, and refer to the [`Detailed Guide`](https://bookdown.org/jsigao/prioritree_manual/thorough-guide.html) section there for more detailed explanation and additional features of the program.
 
 ## Citation and Authors
-PrioriTree is developed and maintained by [Jiansi Gao](mailto:jsigao@ucdavis.edu) (whom to correspond with upon any questions or comments about the program), [Michael R. May](https://rothfelslab.berkeley.edu/home/mike-may/), [Bruce Rannala](http://www.rannala.org/), [Brian R. Moore](http://phylolab.org/).
+PrioriTree is developed and maintained by [Jiansi Gao](mailto:jsigao@gmail.com) (whom to correspond with upon any questions or comments about the program), [Michael R. May](https://rothfelslab.berkeley.edu/home/mike-may/), [Bruce Rannala](http://www.rannala.org/), [Brian R. Moore](http://phylolab.org/).
 
 The recommended citation for the current version of `PrioriTree` is:
 ```
-Jiansi Gao, Michael R May, Bruce Rannala, and Brian R Moore. 2022. “The Impact of Prior Misspecification on Bayesian Phylodynamic Inference of Biogeographic History.” bioRxiv. https://www.biorxiv.org/content/10.1101/2022.08.24.505196v1
+Jiansi Gao, Michael R May, Bruce Rannala, and Brian R Moore. 2022. “PrioriTree: a utility for improving phylodynamic analyses in BEAST.” bioRxiv. https://www.biorxiv.org/content/10.1101/2022.08.24.505196v1
 ```
 
 ## Description

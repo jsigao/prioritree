@@ -2,6 +2,7 @@ if (!requireNamespace("shiny", quietly = T)) {
   stop("prioritree requires shiny to be installed.")
 }
 
+#' Main function that launches the Shiny app (browser interface)
 #' @import shiny
 #' @export
 launchPrioriTree <- function() {

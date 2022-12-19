@@ -1,5 +1,5 @@
-# PrioriTree: a utility for improving phylodynamic analyses in BEAST
-An interactive web utility---distributed as an R package (see https://jsigao.shinyapps.io/prioritree/ for a demo of the utility)---to help researchers specify priors in input files for---and process output files from---analyses of discrete biogeographic history performed using the `BEAST`.
+# PrioriTree: a utility for improving geographic phylodynamic analyses in BEAST
+An interactive browser utility---distributed as an R package (see https://jsigao.shinyapps.io/prioritree/ for a demo of the utility)---to help researchers specify priors in input files for---and process output files from---analyses of discrete biogeographic history performed using the `BEAST`.
 
 ## Installation
 To install the stable version from CRAN (will be available soon):
@@ -13,12 +13,20 @@ install.packages("devtools")
 devtools::install_github("jsigao/prioritree")
 ```
 
+## Launching the Shiny App (Browser Interface)
+
+`PrioriTree` is designed as an `R Shiny` app so most of the functionalities requires user interaction with the browser interface.
+To launch the interface, use the following command:
+```
+PrioriTree::launchPrioriTree()
+```
+
 ## Manual
 A manual of `PrioriTree` can be found at https://bookdown.org/jsigao/prioritree_manual/.
-See the [`Quick Start`](https://bookdown.org/jsigao/prioritree_manual/quick-start.html) section in the manual for basic introduction to the program to get started, and refer to the [`More Thorough Guide`](https://bookdown.org/jsigao/prioritree_manual/thorough-guide.html) section there for more detailed explanation and additional features of the program.
+See the [`Quick Start`](https://bookdown.org/jsigao/prioritree_manual/quick-start.html) section in the manual for basic introduction to the program to get started, and refer to the [`Detailed Guide`](https://bookdown.org/jsigao/prioritree_manual/thorough-guide.html) section there for more detailed explanation and additional features of the program.
 
 ## Citation and Authors
-`PrioriTree` is developed and maintained by [Jiansi Gao](mailto:jsigao@ucdavis.edu) (whom to correspond with upon any questions or comments about the program), [Michael R. May](https://rothfelslab.berkeley.edu/home/mike-may/), [Bruce Rannala](http://www.rannala.org/), [Brian R. Moore](http://phylolab.org/).
+`PrioriTree` is developed and maintained by [Jiansi Gao](mailto:jsigao@gmail.com) (whom to correspond with upon any questions or comments about the program), [Michael R. May](https://rothfelslab.berkeley.edu/home/mike-may/), [Bruce Rannala](http://www.rannala.org/), [Brian R. Moore](http://phylolab.org/).
 
 The recommended citation for the current version of `PrioriTree` is:
 ```
