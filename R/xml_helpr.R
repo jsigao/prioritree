@@ -157,16 +157,16 @@ xml_discretetraitmodel <- function(states_dat, discrete_trait_name, symmetry = T
   
   substitution_model <- paste0(substitution_model, frequencies, rates, indicators, "\t</generalSubstitutionModel>\n", nonZeroRates, site_model)
   
-  rootfreq_model <- paste0("\t\t<frequencyModel id=\"root.frequencyModel\" normalize=\"true\">\n",
-                           "\t\t\t<generalDataType idref=\"", discrete_trait_name, ".dataType\"/>\n", 
-                           "\t\t\t<frequencies>\n", 
-                           "\t\t\t\t<parameter id=\"", discrete_trait_name, ".root.frequencies\" dimension=\"", states_num, "\"/>\n",
-                           "\t\t\t</frequencies>\n",
-                           "\t\t</frequencyModel>\n")
-  if (symmetry) {
-    rootfreq_model <- ""
+  rootfreq_model <- ""
+  if (!symmetry) {
+    rootfreq_model <- paste0("\t<frequencyModel id=\"", discrete_trait_name, ".root.frequencyModel\" normalize=\"true\">\n",
+                             "\t\t<generalDataType idref=\"", discrete_trait_name, ".dataType\"/>\n", 
+                             "\t\t<frequencies>\n", 
+                             "\t\t\t<parameter id=\"", discrete_trait_name, ".root.frequencies\" dimension=\"", states_num, "\"/>\n",
+                             "\t\t</frequencies>\n",
+                             "\t</frequencyModel>\n")
   }
-  
+
   # priors
   # prior on r
   rates_prior <- paste0("\t\t<cachedPrior>\n",
@@ -396,7 +396,6 @@ xml_clockratemodel <- function(discrete_trait_name, ctmc = F, clockrate_mean = 1
 #' @param states_dat a data-frame object containing at least two columns: one for the name of each tip (column name specified by \code{taxon_name}), 
 #' and the other for the trait state of each tip (column name specified by \code{discrete_trait_name})
 #' @param discrete_trait_name name of the column containing tip states
-#' @param rootfreq_model XML code specifying the root-frequency model (as one of the returned value of \code{xml_discretetraitmodel})
 #' @param lheat Number of data clones
 #' @param symmetry Whether the specified geographic model is symmetric (true) or asymmetric (false)
 #' @param complete_history Whether to perform stochastic mapping to simulate full histories of the discrete-geographic trait (default) or perform the "fast" stochastic mapping to compute the expected number of events on each branch
@@ -405,9 +404,9 @@ xml_clockratemodel <- function(discrete_trait_name, ctmc = F, clockrate_mean = 1
 #' @return XML code specifying the treeLikelihood block
 #' 
 #' @example
-#' xml_phyloctmc(states_dat = states_dat, discrete_trait_name = "geography", rootfreq_model = xml_discretetraitmodel(states_dat = states_dat, discrete_trait_name = "geography", delta_prior = "Poisson", poisson_mean = log(2))$rootfreq_model)
+#' xml_phyloctmc(states_dat = states_dat, discrete_trait_name = "geography")
 #' @export
-xml_phyloctmc <- function(states_dat, discrete_trait_name, rootfreq_model, lheat = 1, symmetry = T, complete_history = T, do_totalcount = T, do_pairwisecount = T) {
+xml_phyloctmc <- function(states_dat, discrete_trait_name, lheat = 1, symmetry = T, complete_history = T, do_totalcount = T, do_pairwisecount = T) {
   
   states <- sort(as.vector(unique(states_dat[, discrete_trait_name])))
   states <- states[states != "?"]
@@ -423,6 +422,11 @@ xml_phyloctmc <- function(states_dat, discrete_trait_name, rootfreq_model, lheat
                          "\t\t<generalSubstitutionModel idref=\"", discrete_trait_name, ".model\"/>\n",
                          "\t\t<strictClockBranchRates idref=\"", discrete_trait_name, ".branchRates\"/>\n")
   
+  # add root frequencies for asymmetric model
+  if (!symmetry) {
+    markov_jumps <- paste0(markov_jumps, "\t\t<frequencyModel idref=\"", discrete_trait_name, ".root.frequencyModel\"/>\n")
+  }
+  
   if (lheat > 1) {
     markov_jumps <- paste0("\t<treeLikelihood id=\"", discrete_trait_name, ".treeLikelihood\">\n", markov_jumps)
     
@@ -433,9 +437,6 @@ xml_phyloctmc <- function(states_dat, discrete_trait_name, rootfreq_model, lheat
     markov_jumps <- paste0("\t<markovJumpsTreeLikelihood id=\"", discrete_trait_name,
                            ".treeLikelihood\" stateTagName=\"", discrete_trait_name, ".states\">\n", markov_jumps)
   }
-  
-  # add root frequencies for asymmetric model
-  markov_jumps <- paste0(markov_jumps, rootfreq_model)
   
   if ((!complete_history) && lheat == 1 && (do_totalcount + do_pairwisecount > 0)) {
     

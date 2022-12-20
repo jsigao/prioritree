@@ -10,7 +10,7 @@ ui <- shiny::fluidPage(
   shinyjs::inlineCSS(".disappeared {visibility:hidden;}"),
   shiny::tags$head(
     shiny::tags$script(src = "prism.js"),
-    shiny::tags$link(rel = "stylesheet", type = "text/css", href = "www/prism-okaidia.css")
+    shiny::tags$link(rel = "stylesheet", type = "text/css", href = paste0(system.file("www/", package = "PrioriTree"), "/prism-okaidia.css"))
   ),
   shiny::tags$style(type = 'text/css', ".nav-tabs {font-size: 90%;}"),
   shiny::tags$style(type = 'text/css', ".nav-pills {font-size: 85%;}"),

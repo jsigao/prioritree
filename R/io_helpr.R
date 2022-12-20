@@ -56,7 +56,7 @@ getDifferedLines <- function(last_txt = NULL, current_txt = NULL, file_ext = ".t
   
   dataline_str <- ""
   
-  if (!is.null(last_txt)) {
+  if ((!is.null(last_txt)) && is.character(last_txt[1])) {
     lastxml_tmppath <- tempfile(fileext = file_ext)
     currentxml_tmppath <- tempfile(fileext = file_ext)
     

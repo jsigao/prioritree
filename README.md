@@ -18,7 +18,8 @@ devtools::install_github("jsigao/prioritree")
 `PrioriTree` is designed as an `R Shiny` app so most of the functionalities requires user interaction with the browser interface.
 To launch the interface, use the following command:
 ```
-PrioriTree::launchPrioriTree()
+library(PrioriTree)
+launchPrioriTree()
 ```
 
 ## Manual

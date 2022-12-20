@@ -1,11 +1,11 @@
 Package: PrioriTree
 Type: Package
-Version: 0.0.0
+Version: 0.0.1
 Authors@R: c(person("Jiansi", "Gao", email = "jsigao@ucdavis.edu", role = c("aut", "cre")),
     person("Michael", "May", email = "mikeryanmay@gmail.com", role = "aut"),
     person("Bruce", "Rannala", email = "brannala@ucdavis.edu", role = "aut"),
     person("Brian", "Moore", email = "brianmoore@ucdavis.edu", role = "aut"))
-Maintainer: Jiansi Gao <jsigao@ucdavis.edu>
+Maintainer: Jiansi Gao <jsigao@gamil.com>
 Depends: R (>= 3.2.0), shiny
 Imports: shinyjs, rmutil, markdown, rmarkdown, DT, 
     ape, phytools, phangorn, RColorBrewer, scales, expm

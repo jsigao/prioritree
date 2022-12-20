@@ -1342,8 +1342,11 @@ server <- function(input, output, session) {
   model_xml <- reactive({
     shiny::req(states_dat())
     shiny::req(tree_values$tree)
+    rfm <- discretetraitmodel_xml()$rootfreq_model
     
-    paste(treemodel_xml()$tree_model, clockratemodel_xml()$discretetrait_clock_rate, discretetraitmodel_xml()$substitution_model, sep = "\n")
+    paste0(paste(treemodel_xml()$tree_model, clockratemodel_xml()$discretetrait_clock_rate, 
+          discretetraitmodel_xml()$substitution_model, sep = "\n"), 
+          ifelse(rfm == "", "", "\n"), rfm)
   })
   
   # put the prior xml chunks together
@@ -1372,7 +1375,7 @@ server <- function(input, output, session) {
     
     paste0("\t<operators id=\"operators\" optimizationSchedule=\"log\">\n", 
            treemodel_xml()$tree_proposal, clockratemodel_xml()$clock_rate_proposal, discretetraitmodel_xml()$substmodel_proposals, 
-           "\t</operators/>\n")
+           "\t</operators>\n")
   })
   
   moves_xml_d <- debounce(moves_xml, millis = 1000)
@@ -1398,7 +1401,7 @@ server <- function(input, output, session) {
       do_pairwisecount <- input$markovjumps_pairwise
     }
     
-    xml_phyloctmc(states_dat = states_dat(), discrete_trait_name = input$traitcolumn_name, rootfreq_model = discretetraitmodel_xml()$rootfreq_model,
+    xml_phyloctmc(states_dat = states_dat(), discrete_trait_name = input$traitcolumn_name, 
                   lheat = lheat, symmetry = (input$model_symmetry == "symmetric"),
                   complete_history = (input$do_stochasticmapping == "Stochastic mapping (complete history, simulation-based)"),
                   do_totalcount = do_totalcount, do_pairwisecount = do_pairwisecount)
@@ -1479,7 +1482,7 @@ server <- function(input, output, session) {
   mcmc_xml <- reactive({
     sapply(monitors_xml(), function(x) 
       paste0("\t<mcmc id=\"mcmc\" chainLength=\"", as.integer(input$mcmc_chainlength), "\" autoOptimize=\"true\">\n",
-             posterior_xml(), "\t\t<operators idref=\"operators\">\n\n", 
+             posterior_xml(), "\t\t<operators idref=\"operators\"/>\n\n", 
              x$log_jointposterior, "\t</mcmc>\n"))
   })
   
@@ -1505,7 +1508,7 @@ server <- function(input, output, session) {
     for (i in 1:lheats$num) {
       for (j in 1:input$mcmc_numreplicates) {
         fullxml_reps <- c(fullxml_reps, paste("<?xml version=\"1.0\" standalone=\"yes\"?>", "<beast>",
-                                              discretetraitdata_xml()[i], model_xml(), prior_xml(), moves_xml(), phyloctmc_xml(), mcmc_xml()[j], 
+                                              discretetraitdata_xml()[i], model_xml(), phyloctmc_xml(), prior_xml(), moves_xml(), mcmc_xml()[j], 
                                               monitors_xml()[[j]]$log_powerposterior,
                                               "\t<report>\n\t\t<property name=\"timer\">\n\t\t\t<mcmc idref=\"mcmc\"/>\n\t\t</property>\n\t</report>", 
                                               "</beast>", sep = "\n"))
